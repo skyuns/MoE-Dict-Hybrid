@@ -681,6 +681,12 @@ function mergeResults(resA, resB, extraInfoKeyA = null) {
 }
 
 function performWildcardSearch(q) {
+    // 新增防護機制：如果拔除 * 號後字串為空（代表只輸入 * 或連續的 ***），直接擋掉不檢索
+    if (q.replace(/\*/g, '').trim() === '') {
+        renderList([], "萬用字元檢索結果", "⚠️ 請在 * 號前後輸入字");
+        return;
+    }
+
     const el = document.getElementById('list'); el.innerHTML = ""; window.currentView = [];
     const escapeRegExp = string => string.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
     let regexPattern = '^' + q.split('*').map(escapeRegExp).join('.*') + '$';
