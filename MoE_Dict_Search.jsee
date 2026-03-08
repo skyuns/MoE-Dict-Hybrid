@@ -39,8 +39,8 @@ if( document.selection.IsEmpty ) { document.selection.SelectWord(); }
 if( !document.selection.IsEmpty ) {
     let sRawText = document.selection.Text;
     
-    // 擴充版 Regex：加入漢語拼音字母與聲調母音
-    const filterRegex = /[^\u4e00-\u9fa50-9\u3105-\u3129\u02ca\u02c7\u02cb\u02d9a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü\s\-]/g;
+    // 擴充版 Regex：加入漢語拼音字母與聲調母音，並加入 \uD800-\uDBFF 和 \uDC00-\uDFFF 以支援「𪈼」這類高平面冷僻字
+    const filterRegex = /[^\u4e00-\u9fff\u3400-\u4dbf\uD800-\uDBFF\uDC00-\uDFFF0-9\u3105-\u3129\u02ca\u02c7\u02cb\u02d9a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü\s\-]/g;
     let sCleanText = sRawText.replace(filterRegex, "");
     
     if( sCleanText.length > 0 ) {
@@ -88,4 +88,5 @@ if( !document.selection.IsEmpty ) {
             }
         }, searchDelay);
     }
+
 }
