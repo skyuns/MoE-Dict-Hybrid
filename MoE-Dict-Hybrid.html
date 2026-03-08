@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>國語辭典與成語典</title>
+    <style>
+        :root { 
+            --primary: #333; --accent: #0066cc; --bg: #f8f9fa; --border: #ddd; 
+            --pos-color: #e67e22; 
+            --zhuyin-bg: #e8f5e9; --zhuyin-text: #2e7d32; 
+            --radical-bg: #f3e5f5; --radical-text: #7b1fa2; 
+            --stroke-bg: #e0f7fa; --stroke-text: #00838f; 
+            --highlight-bg: #fff9c4; 
+            --dictA-color: #1565c0; --dictB-color: #2e7d32;
+        }
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg); color: #333; overflow: hidden; }
+        
+        header { background: #fff; padding: 10px 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; gap: 10px; align-items: center; z-index: 100; flex-wrap: nowrap; }
+        .nav-history { display: flex; gap: 5px; flex-shrink: 0; }
+        .search-label { font-size: 13px; font-weight: bold; color: #666; white-space: nowrap; }
+        
+        /* 搜尋框與提示字的容器 */
+        .search-wrapper { position: relative; flex: 2; display: flex; min-width: 80px; }
+        #search { width: 100%; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; }
+        .search-hint { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #aaa; pointer-events: none; display: none; }
+        
+        #defSearch { flex: 1; min-width: 80px; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; }
+        
+        button { cursor: pointer; padding: 8px 12px; background: #fff; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+        button:hover { background: #f0f0f0; }
+        button:disabled { cursor: not-allowed; opacity: 0.3; }
+        .btn-primary { background: var(--primary); color: white; border: none; font-weight: bold; }
+
+        main { flex: 1; display: flex; overflow: hidden; width: 100%; }
+        #list { flex: 0 1 200px; min-width: 150px; border-right: 1px solid var(--border); overflow-y: auto; background: #fff; }
+        
+        #detail-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+        .dict-panel { overflow-y: auto; background: #fff; position: relative; transition: flex 0.3s ease, padding 0.3s ease; border-bottom: 4px solid var(--border); padding: 20px 15px; }
+        .dict-panel:last-child { border-bottom: none; }
+        .dict-panel.hidden { display: none; }
+        
+        .dict-badge { position: absolute; top: 10px; right: 15px; font-size: 12px; padding: 4px 8px; border-radius: 12px; color: #fff; font-weight: bold; opacity: 0.8; pointer-events: none; z-index: 5; }
+        .badge-A { background: var(--dictA-color); }
+        .badge-B { background: var(--dictB-color); }
+        
+        .panel-content { min-height: 100%; display: flex; flex-direction: column; }
+        .empty-msg { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #bbb; font-weight: bold; letter-spacing: 2px; user-select: none; margin: 0; }
+
+        .list-header { background: #eee; padding: 6px 15px; font-size: 12px; font-weight: bold; color: #666; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #ddd; }
+        .list-header.fallback { background: #fff3e0; color: #e65100; border-bottom: 1px solid #ffe0b2; }
+
+        #selection-wrapper { position: fixed; display: none; z-index: 9999; background: white; padding: 4px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.25); border: 1px solid #bbb; flex-direction: row; gap: 5px; pointer-events: auto; white-space: nowrap; }
+        #selection-wrapper button { background: var(--accent); color: white; border: none; padding: 6px 14px; border-radius: 4px; font-size: 13px; font-weight: bold; transition: transform 0.1s; }
+        #selection-wrapper button:hover { transform: translateY(-1px); background: #005bb5; }
+        #selection-wrapper button.sel-def-btn { background: var(--pos-color); }
+        #selection-wrapper button.sel-def-btn:hover { background: #cf6d1c; }
+
+        .item { padding: 10px 15px; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: background 0.1s; display: block; overflow: hidden; text-overflow: ellipsis; }
+        .item:hover { background: #f0f7ff !important; } 
+        .item.active { background: #eef6ff !important; border-left: 5px solid var(--accent); }
+        .item .w-title { font-weight: bold; font-size: 16px; pointer-events: none; display: flex; align-items: center; flex-wrap: wrap; }
+        
+        .item-source-dots { display: inline-block; margin-left: 5px; }
+        .dot-A { display: inline-block; width: 9px; height: 9px; background: var(--dictA-color); margin-right: 4px; border-radius: 2px; }
+        .dot-B { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--dictB-color); margin-right: 4px; }
+        
+        .multi-badge { font-size: 11px; color: #555; background: #e0e0e0; padding: 1px 6px; border-radius: 10px; margin-left: 6px; font-weight: bold; }
+
+        .char-link { cursor: pointer; padding: 0 2px; border-radius: 4px; transition: 0.2s; display: inline-flex; align-items: center; }
+        .char-link:hover { background: #ffe082 !important; color: #000; text-decoration: none !important; }
+
+        .zhuyin-tag { background: var(--zhuyin-bg); color: var(--zhuyin-text); padding: 2px 8px; margin: 2px; border-radius: 4px; cursor: pointer; font-size: 14px; border: 1px solid #c8e6c9; display: inline-block; transition: 0.2s; font-weight: bold; }
+        .zhuyin-tag:hover { background: var(--zhuyin-text) !important; color: #fff !important; }
+        .radical-tag { background: var(--radical-bg); color: var(--radical-text); padding: 2px 10px; margin: 2px; border-radius: 4px; cursor: pointer; font-size: 14px; border: 1px solid #e1bee7; display: inline-block; transition: 0.2s; font-weight: bold; }
+        .radical-tag:hover { background: var(--radical-text) !important; color: #fff !important; }
+        .stroke-tag { background: var(--stroke-bg); color: var(--stroke-text); padding: 2px 10px; margin: 2px; border-radius: 4px; cursor: pointer; font-size: 14px; border: 1px solid #b2ebf2; display: inline-block; transition: 0.2s; font-weight: bold; }
+        .stroke-tag:hover { background: var(--stroke-text) !important; color: #fff !important; }
+        .tag { background: #f0f2f5; color: var(--accent); padding: 2px 8px; margin: 2px; border-radius: 4px; cursor: pointer; font-size: 14px; border: 1px solid #dce3eb; display: inline-block; transition: 0.2s; }
+        .tag:hover { background: var(--accent) !important; color: #fff !important; }
+
+        .pos-box { color: var(--pos-color); border: 1px solid var(--pos-color); font-weight: bold; padding: 0 4px; border-radius: 4px; display: inline-block; line-height: 1.2; margin: 0 3px; vertical-align: baseline; font-size: 13px; }
+        .match-highlight { background-color: var(--highlight-bg); padding: 0 2px; border-radius: 2px; }
+        .ext-img { height: 1.1em; vertical-align: middle; margin: 0 2px; }
+        
+        .diff-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .diff-table th, .diff-table td { border: 1px solid #eee; padding: 6px 10px; font-size: 14px; }
+        .diff-table th { background: #f4f4f4; color: #444; text-align: center; }
+
+        .desc-table { width: 100%; max-width: 550px; border-collapse: collapse; margin: 20px auto; font-size: 13px; text-align: left; background: #fff; }
+        .desc-table th, .desc-table td { border: 1px solid var(--border); padding: 8px 12px; }
+        .desc-table th { background: #f4f4f4; width: 130px; }
+
+        .field { margin-bottom: 12px; display: flex; border-bottom: 1px solid #f5f5f5; padding-bottom: 8px; }
+        .label { color: #888; width: 70px; flex-shrink: 0; font-size: 14px; font-weight: bold; }
+        .content { flex: 1; white-space: pre-wrap; line-height: 1.8; overflow-wrap: anywhere; }
+        
+        .hanging-indent { padding-left: 0.8em; text-indent: -0.8em; margin-bottom: 4px; }
+        .normal-indent { margin-bottom: 4px; }
+
+        .group-header { border-left: 4px solid var(--primary); padding-left: 8px; color: var(--primary); margin: 20px 0 10px 0; font-size: 16px; font-weight: bold; }
+        .sub-group-header { display: inline-block; margin: 10px 0 5px 0; font-weight: bold; color: var(--pos-color); border-bottom: 1px dashed #ccc; padding-bottom: 2px; font-size: 13px;}
+
+        .home-main-title { font-size: 28px; font-weight: bold; margin: 15px 0; color: #222; }
+        .btn-inline { display: inline-block; padding: 8px 20px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; vertical-align: middle; }
+        .btn-ready { background: #2e7d32; }
+        .btn-ready:hover { background: #1b5e20; }
+        
+        .dict-status-container { margin: 10px 0; display: inline-block; text-align: left; }
+        .dict-status { font-size: 14px; color: #333; font-weight: bold; display: flex; align-items: center; margin: 5px 0; justify-content: space-between; width: 230px; }
+        
+        /* 釋放與解除連結按鈕設計 */
+        .dict-action-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 5px 0; }
+        .btn-unload { background: #e53935; color: white; border: none; padding: 4px 10px; font-size: 12px; margin-left: 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; }
+        .btn-unload:hover { background: #c62828; }
+        .btn-unlink { background: #9e9e9e; color: white; border: none; padding: 8px 15px; font-size: 14px; border-radius: 4px; cursor: pointer; }
+        .btn-unlink:hover { background: #757575; }
+
+        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        #modal-content { background: white; width: 85%; max-width: 800px; padding: 40px; border-radius: 12px; overflow-y: auto; }
+        
+        @media (max-width: 900px) {
+            .btn-text { display: none; }
+            .search-label { display: none; }
+            #status { display: none; }
+            #list { flex-basis: 35%; }
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="nav-history">
+        <button id="btnPrev" onclick="navBack()" disabled>◀</button>
+        <button id="btnNext" onclick="navForward()" disabled>▶</button>
+        <button onclick="goHome()" title="回首頁">🏠<span class="btn-text"> 首頁</span></button>
+    </div>
+    <span class="search-label">基本檢索</span>
+    <div class="search-wrapper">
+        <input type="text" id="search" placeholder="等待載入辭典..." disabled>
+        <span id="search-hint" class="search-hint">(輸入數字檢索筆畫)</span>
+    </div>
+    <span class="search-label">釋義檢索</span>
+    <input type="text" id="defSearch" placeholder="等待載入辭典..." disabled>
+    <span id="status" style="font-size:11px; color:gray; white-space:nowrap; overflow:hidden;">準備中...</span>
+    <button style="border-radius:50%; width:30px; height:30px; color:var(--accent); font-weight:bold; flex-shrink:0;" onclick="toggleModal(true)">i</button>
+</header>
+
+<main>
+    <div id="list"></div>
+    <div id="detail-container">
+        <div id="detailA" class="dict-panel hidden"><div class="dict-badge badge-A">國語辭典</div><div class="panel-content"></div></div>
+        <div id="detailB" class="dict-panel hidden"><div class="dict-badge badge-B">成語典</div><div class="panel-content"></div></div>
+    </div>
+</main>
+
+<div id="selection-wrapper">
+    <button id="sel-basic-btn">基本檢索</button>
+    <button class="sel-def-btn" id="sel-def-btn">釋義檢索</button>
+</div>
+
+<div id="modal-overlay" onclick="toggleModal(false)">
+    <div id="modal-content" onclick="event.stopPropagation()">
+        <h2>📖 教育部雙辭典檢索系統 (Web 離線版) 使用說明</h2>
+        <div style="font-size: 14px; line-height: 1.6; color: #444; border: 1px solid #eee; padding: 20px; background: #fafafa; max-height: 60vh; overflow-y: auto;">
+            <p style="margin-top: 0;">本系統整合教育部《重編國語辭典修訂本》與《成語典》。<br>
+            授權採用「創用CC－姓名標示－禁止改作 臺灣3.0版授權條款」釋出。<br>
+            本授權條款允許使用者重製、散布、傳輸著作（包括商業性利用），但不得修改該著作，使用時必須遵照「使用說明」之內容要求。</p>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px 15px; margin: 15px 0; color: #856404; font-weight: bold;">
+                ⚠️ 本系統僅提供瀏覽與檢索介面，未內建任何辭典數據資料。請自行至「教育部國語辭典公眾授權網」下載原始檔案並轉存後載入。
+            </div>
+            
+            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0;">
+            
+            <h3 style="color: var(--dictA-color); margin: 10px 0 5px 0;">《重編國語辭典修訂本》</h3>
+            <ul style="margin: 0 0 15px 20px; padding: 0;">
+                <li><b>主要適用對象：</b>對歷史語言有興趣的研究者。</li>
+                <li><b>特色：</b>本典為一部歷史語言辭典，記錄中古至現代各類詞語，並大量引用古典文獻書證，字音部分則兼收現代及傳統音讀。</li>
+                <li><b>最新版本編號：</b>2015_20251229（<a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/reviseddict_10312.pdf" target="_blank" style="color: var(--accent); text-decoration: underline;">PDF版使用說明下載</a>）</li>
+                <li><b>資料下載：</b><a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_reviseddict_download.html" target="_blank" style="color: var(--accent); text-decoration: underline;">教育部授權網下載頁面</a></li>
+                <li><b>載入步驟：</b>於上述頁面下載文字資料庫 ZIP 檔。解壓縮後，將 <code>dict_revised_2015_20251229.xlsx</code> 用 Excel 開啟，另存新檔選擇 <b>"CSV UTF-8 (逗號分隔)"</b> 格式（即 <code>dict_revised_2015_20251229.csv</code>），即可載入本系統使用。</li>
+            </ul>
+
+            <h3 style="color: var(--dictB-color); margin: 10px 0 5px 0;">《成語典》</h3>
+            <ul style="margin: 0 0 0 20px; padding: 0;">
+                <li><b>主要適用對象：</b>語文教學者與學生。</li>
+                <li><b>特色：</b>每條成語除釋義、音讀，另有典故原文及其白話譯注、用法說明、例句等，內容豐富。</li>
+                <li><b>最新版本編號：</b>2020_20251224（<a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/idiomsdict_10409.pdf" target="_blank" style="color: var(--accent); text-decoration: underline;">PDF版使用說明下載</a>）</li>
+                <li><b>資料下載：</b><a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_idiomsdict_download.html" target="_blank" style="color: var(--accent); text-decoration: underline;">教育部授權網下載頁面</a></li>
+                <li><b>載入步驟：</b>於上述頁面下載文字資料庫 ZIP 檔。解壓縮後，將 <code>dict_idioms_2020_20251224.xlsx</code> 用 Excel 開啟，另存新檔選擇 <b>"CSV UTF-8 (逗號分隔)"</b> 格式（即 <code>dict_idioms_2020_20251224.csv</code>），即可載入本系統使用。</li>
+            </ul>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px;">
+            <div style="font-size: 13px; color: #666; font-style: italic; line-height: 1.4;">
+                <strong style="color: var(--accent);">MoE-Dict-Hybrid:</strong> Synchronized Lexicons, Seamless Discovery.<br>
+                <span style="font-size: 12px; color: #999;">Developed by skyuns</span>
+            </div>
+            <button class="btn-primary" onclick="toggleModal(false)">關閉</button>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+// --- IndexedDB for File System Handles ---
+const dbName = "DictHandleDB";
+const storeName = "handles";
+let dbInstance = null;
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        if (dbInstance) return resolve(dbInstance);
+        let request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = e => e.target.result.createObjectStore(storeName);
+        request.onsuccess = e => { dbInstance = e.target.result; resolve(dbInstance); };
+        request.onerror = e => reject(e.target.error);
+    });
+}
+async function saveHandle(key, handle) {
+    let db = await initDB();
+    return new Promise((resolve) => {
+        let tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).put(handle, key);
+        tx.oncomplete = () => resolve();
+    });
+}
+async function getHandle(key) {
+    let db = await initDB();
+    return new Promise((resolve) => {
+        let req = db.transaction(storeName).objectStore(storeName).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+    });
+}
+
+// 新增：解除 Handle 連結功能
+async function deleteHandle(key) {
+    let db = await initDB();
+    return new Promise((resolve) => {
+        let tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).delete(key);
+        tx.oncomplete = () => resolve();
+    });
+}
+async function unlinkDictionary(dictType) {
+    await deleteHandle('handle_' + dictType);
+    renderHome();
+}
+
+async function verifyPermission(fileHandle, withInteraction = false) {
+    const opts = { mode: 'read' };
+    if ((await fileHandle.queryPermission(opts)) === 'granted') return true;
+    if (withInteraction) {
+        if ((await fileHandle.requestPermission(opts)) === 'granted') return true;
+    }
+    return false;
+}
+
+// --- Data Stores ---
+let dataStoreA = []; 
+let dataStoreB = []; 
+let navHistory = [];
+let navIdx = -1;
+let selectedTextToSearch = "";
+let searchTimeout; // 用於輸入防卡頓
+
+const HEADERS_A = ["字詞名","辭條別名","字數","字詞號","部首字","總筆畫數","部首外筆畫數","多音排序","注音一式","變體類型 1:變 2:又音 3:語音 4:讀音","變體注音","漢語拼音","變體漢語拼音","相似詞","相反詞","釋義","多音參見訊息","異體字"];
+const HEADERS_B = ["編號","成語","注音","漢語拼音","釋義","典源文獻名稱","典源文獻內容","典源注解","典源參考資料","典故說明","書證","用法說明-語義說明","用法說明-使用類別","用法說明-例句","辨識-形音辨誤","辨識-同","辨識-異","辨識-例句","近義成語","反義成語","參考詞語","主條成語／非主條成語"];
+
+const RADICAL_LIST = ["丨","丶","丿","乙","亅","二","亠","人","儿","入","八","冂","冖","冫","几","凵","刀","力","勹","匕","匚","匸","十","卜","卩","厂","厶","又","口","囗","土","士","夂","夊","夕","大","女","子","宀","寸","小","尢","尸","屮","山","巛","工","己","巾","干","幺","广","廴","廾","弋","弓","彐","彡","彳","心","戈","戶","手","支","攴","文","斗","斤","方","无","日","曰","月","木","欠","止","歹","殳","毋","比","毛","氏","气","水","火","爪","父","爻","爿","片","牙","牛","犬","玄","玉","瓜","瓦","甘","生","用","田","疋","疒","癶","白","皮","皿","目","矛","矢","石","示","禸","禾","穴","立","竹","米","糸","缶","网","羊","羽","老","而","耒","耳","聿","肉","臣","自","至","臼","舌","舛","舟","艮","色","艸","虍","虫","血","行","衣","襾","見","角","言","谷","豆","豕","豸","貝","赤","走","足","身","車","辛","辰","辵","邑","一","酉","釆","里","金","長","門","阜","隶","隹","雨","青","非","面","革","韋","韭","音","頁","風","飛","食","首","香","馬","骨","高","髟","鬥","鬯","鬲","鬼","魚","鳥","鹵","鹿","麥","麻","黃","黍","黑","黹","黽","鼎","鼓","鼠","鼻","齊","齒","龍","龜","龠"];
+
+const RADICAL_GROUPS = [
+    { strokes: 1, rads: "一 丨 丶 丿 乙 亅" },
+    { strokes: 2, rads: "二 亠 人 儿 入 八 冂 冖 冫 几 凵 刀 力 勹 匕 匚 匸 十 卜 卩 厂 厶 又" },
+    { strokes: 3, rads: "口 囗 土 士 夂 夊 夕 大 女 子 宀 寸 小 尢 尸 屮 山 巛 工 己 巾 干 幺 广 廴 廾 弋 弓 彐 彡 彳" },
+    { strokes: 4, rads: "心 戈 戶 手 支 攴 文 斗 斤 方 无 日 曰 月 木 欠 止 歹 殳 毋 比 毛 氏 气 水 火 爪 父 爻 爿 片 牙 牛 犬" },
+    { strokes: 5, rads: "玄 玉 瓜 瓦 甘 生 用 田 疋 疒 癶 白 皮 皿 目 矛 矢 石 示 禸 禾 穴 立" },
+    { strokes: 6, rads: "竹 米 糸 缶 网 羊 羽 老 而 耒 耳 聿 肉 臣 自 至 臼 舌 舛 舟 艮 色 艸 虍 虫 血 行 衣 襾" },
+    { strokes: 7, rads: "見 角 言 谷 豆 豕 豸 貝 赤 走 足 身 車 辛 辰 辵 邑" },
+    { strokes: 8, rads: "酉 釆 里 金 長 門 阜 隶 隹 雨 青 非" },
+    { strokes: 9, rads: "面 革 韋 韭 音 頁 風 飛 食 首 香" },
+    { strokes: 10, rads: "馬 骨 高 髟 鬥 鬯 鬲 鬼" },
+    { strokes: 11, rads: "魚 鳥 鹵 鹿 麥 麻" },
+    { strokes: 12, rads: "黃 黍 黑 黹" },
+    { strokes: 13, rads: "黽 鼎 鼓 鼠" },
+    { strokes: 14, rads: "鼻 齊" },
+    { strokes: 15, rads: "齒" },
+    { strokes: 16, rads: "龍 龜" },
+    { strokes: 17, rads: "龠" }
+];
+
+const pinyinToneMap = { 'ā':'a','á':'a','ǎ':'a','à':'a', 'ē':'e','é':'e','ě':'e','è':'e', 'ī':'i','í':'i','ǐ':'i','ì':'i', 'ō':'o','ó':'o','ǒ':'o','ò':'o', 'ū':'u','ú':'u','ǔ':'u','ù':'u', 'ǖ':'ü','ǘ':'ü','ǚ':'ü','ǜ':'ü' };
+function removePinyinTones(str) {
+    if(!str) return "";
+    return str.replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/g, match => pinyinToneMap[match] || match);
+}
+
+// 數字轉換聲調
+function applyToneToPinyin(pinyinInput) {
+    return pinyinInput.replace(/([a-zA-ZüÜ]+)(\d)/g, function(match, letters, toneNum) {
+        const toneMap = {
+            1: { a:'ā', e:'ē', i:'ī', o:'ō', u:'ū', 'ü':'ǖ', A:'Ā', E:'Ē', I:'Ī', O:'Ō', U:'Ū', 'Ü':'Ǖ' },
+            2: { a:'á', e:'é', i:'í', o:'ó', u:'ú', 'ü':'ǘ', A:'Á', E:'É', I:'Í', O:'Ó', U:'Ú', 'Ü':'Ǘ' },
+            3: { a:'ǎ', e:'ě', i:'ǐ', o:'ǒ', u:'ǔ', 'ü':'ǚ', A:'Ǎ', E:'Ě', I:'Ǐ', O:'Ǒ', U:'Ǔ', 'Ü':'Ǚ' },
+            4: { a:'à', e:'è', i:'ì', o:'ò', u:'ù', 'ü':'ǜ', A:'À', E:'È', I:'Ì', O:'Ò', U:'Ù', 'Ü':'Ǜ' }
+        };
+        let t = parseInt(toneNum);
+        if(t < 1 || t > 4) return letters;
+        
+        let target = '';
+        if (letters.includes('a') || letters.includes('A')) target = letters.includes('a') ? 'a' : 'A';
+        else if (letters.includes('e') || letters.includes('E')) target = letters.includes('e') ? 'e' : 'E';
+        else if (letters.includes('o') || letters.includes('O')) target = letters.includes('o') ? 'o' : 'O';
+        else {
+            let vowels = letters.match(/[iouüIOUÜ]/g);
+            if(vowels) target = vowels[vowels.length - 1];
+        }
+        if(!target) return letters;
+        return letters.replace(target, toneMap[t][target] || target);
+    });
+}
+
+const CIRCLE_NUMS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿'.split('');
+
+// --- File Loading & Unloading (保留原有邏輯) ---
+async function loadDictionary(dictType) {
+    try {
+        let handle = await getHandle('handle_' + dictType);
+        if (handle) {
+            let permitted = await verifyPermission(handle, true);
+            if (permitted) { await processFileHandle(handle, dictType); return; }
+        }
+        [handle] = await window.showOpenFilePicker({ types: [{description: 'CSV Files', accept: {'text/csv': ['.csv']}}] });
+        // 在處理成功後才儲存 Handle
+        let success = await processFileHandle(handle, dictType);
+        if (success !== false) {
+            await saveHandle('handle_' + dictType, handle);
+        }
+    } catch (err) { console.error(err); alert("載入取消或失敗。"); }
+}
+
+function unloadDictionary(dictType) {
+    if (dictType === 'A') dataStoreA = [];
+    if (dictType === 'B') dataStoreB = [];
+    updateStatus();
+    goHome();
+}
+
+async function processFileHandle(handle, dictType) {
+    document.getElementById('status').innerText = `讀取 ${dictType === 'A' ? '國語辭典' : '成語典'} 中...`;
+    const file = await handle.getFile();
+    const text = await file.text();
+    const raw = parseFullCSV(text);
+    
+    // 防呆機制：判斷是否為空檔或無標題
+    if (!raw || raw.length < 1) {
+        alert("請使用正確的格式，目前最新版可從 [教育部國語辭典公眾授權網] 下載");
+        await deleteHandle('handle_' + dictType); // 清空狀態
+        updateStatus(); goHome();
+        return false;
+    }
+
+    // 防呆機制：判斷至少 6 個核心欄位
+    const headers = raw[0];
+    let validCount = 0;
+    if (dictType === 'A') {
+        const reqA = ["字詞名", "注音一式", "釋義", "部首字", "總筆畫數", "漢語拼音"];
+        reqA.forEach(col => { if(headers.includes(col)) validCount++; });
+    } else {
+        const reqB = ["成語", "注音", "釋義", "典源文獻名稱", "漢語拼音", "用法說明-例句"];
+        reqB.forEach(col => { if(headers.includes(col)) validCount++; });
+    }
+
+    if (validCount < 6) {
+        alert("請使用正確的格式，目前最新版可從 [教育部國語辭典公眾授權網] 下載");
+        await deleteHandle('handle_' + dictType); // 徹底清空錯誤鑰匙狀態
+        updateStatus(); goHome(); // 讓介面恢復可重新載入的狀態
+        return false;
+    }
+    
+    if (dictType === 'A') {
+        dataStoreA = raw.slice(1).map(cells => { let o = {}; HEADERS_A.forEach((h, idx) => o[h] = cells[idx] || ""); return o; }).filter(i => i['字詞名']);
+    } else {
+        dataStoreB = raw.slice(1).map(cells => { let o = {}; HEADERS_B.forEach((h, idx) => o[h] = cells[idx] || ""); return o; }).filter(i => i['成語']);
+    }
+    updateStatus(); goHome();
+    return true;
+}
+
+function updateStatus() {
+    let msg = [];
+    if (dataStoreA.length > 0) msg.push(`國語: ${dataStoreA.length.toLocaleString()}`);
+    if (dataStoreB.length > 0) msg.push(`成語: ${dataStoreB.length.toLocaleString()}`);
+    document.getElementById('status').innerText = msg.length > 0 ? msg.join(' | ') : '準備中...';
+    
+    const inputs = [document.getElementById('search'), document.getElementById('defSearch')];
+    if (dataStoreA.length > 0 || dataStoreB.length > 0) {
+        inputs.forEach(el => { el.disabled = false; el.placeholder = el.id === 'search' ? "輸入關鍵字/注音/拼音/部首/筆畫/*" : "輸入 2 字以上..."; });
+    } else {
+        inputs.forEach(el => { el.disabled = true; el.placeholder = "等待載入辭典..."; });
+    }
+}
+
+function parseFullCSV(text) {
+    const rows = []; let curRow = []; let curCell = ''; let inQ = false;
+    let i = text.startsWith('\ufeff') ? 1 : 0;
+    for (; i < text.length; i++) {
+        const c = text[i]; const nc = text[i+1];
+        if (c === '"') { if (inQ && nc === '"') { curCell += '"'; i++; } else inQ = !inQ; }
+        else if (c === ',' && !inQ) { curRow.push(curCell.trim()); curCell = ''; }
+        else if ((c === '\r' || c === '\n') && !inQ) {
+            if (curCell !== '' || curRow.length > 0) { curRow.push(curCell.trim()); rows.push(curRow); }
+            curRow = []; curCell = ''; if (c === '\r' && nc === '\n') i++;
+        } else curCell += c;
+    }
+    return rows;
+}
+
+function renderHomeList() {
+    const el = document.getElementById('list');
+    
+    // 顯示邏輯：只有載入國語辭典(A)後才顯示。
+    // 若 A 為空（包含全空、或只開啟成語典的狀態），則清空左側不顯示部首表。
+    if (dataStoreA.length === 0) {
+        el.innerHTML = "";
+        return;
+    }
+
+    let html = `<div class="list-header">214 部首表</div>`;
+    html += `<div style="padding:10px; font-size:14px; line-height:1.6;">`;
+    RADICAL_GROUPS.forEach(grp => {
+        html += `<div style="margin-bottom:12px;">`;
+        html += `<div style="color:var(--accent); font-weight:bold; margin-bottom:6px; border-bottom:1px solid #eee; padding-bottom:2px;">${grp.strokes} 畫</div>`;
+        html += `<div style="display:flex; flex-wrap:wrap; gap:6px;">`;
+        grp.rads.split(' ').forEach(r => {
+            if(r) html += `<span class="radical-tag" onclick="jumpToRadical('${r}')" style="cursor:pointer; margin:0; padding:2px 8px;">${r}</span>`;
+        });
+        html += `</div></div>`;
+    });
+    html += `</div>`;
+    el.innerHTML = html;
+}
+
+async function renderHome() {
+    let handleA = await getHandle('handle_A');
+    let handleB = await getHandle('handle_B');
+    
+    let btnA = dataStoreA.length > 0 
+        ? `<div class="dict-status"><span>✔️ 國語辭典已載入</span> <button class="btn-unload" onclick="unloadDictionary('A')">釋放</button></div>` 
+        : (handleA 
+            ? `<div class="dict-action-row"><button class="btn-inline btn-ready" onclick="loadDictionary('A')">恢復 國語辭典 權限</button> <button class="btn-unlink" onclick="unlinkDictionary('A')">解除連結</button></div>`
+            : `<div class="dict-action-row"><button class="btn-inline" onclick="loadDictionary('A')">載入 國語辭典 CSV</button></div>`);
+        
+    let btnB = dataStoreB.length > 0 
+        ? `<div class="dict-status"><span>✔️ 成語典已載入</span> <button class="btn-unload" onclick="unloadDictionary('B')">釋放</button></div>` 
+        : (handleB 
+            ? `<div class="dict-action-row"><button class="btn-inline btn-ready" onclick="loadDictionary('B')">恢復 成語典 權限</button> <button class="btn-unlink" onclick="unlinkDictionary('B')">解除連結</button></div>`
+            : `<div class="dict-action-row"><button class="btn-inline" onclick="loadDictionary('B')">載入 成語典 CSV</button></div>`);
+
+    let msgArea = (dataStoreA.length > 0 || dataStoreB.length > 0) ? `<h2>請在上方輸入框開始查詢，或點選左側部首</h2>` : `<h2>請先載入辭典檔案</h2>`;
+    
+    document.getElementById('detail-container').innerHTML = `
+        <div id="home-screen" style="text-align:center; padding-top:20px; flex:1; overflow-y:auto;">
+            <div style="font-size:60px;">📖</div>
+            <div class="home-main-title">《重編國語辭典》與《成語典》</div>
+            ${msgArea}
+            <div class="dict-status-container">${btnA}${btnB}</div>
+            <hr style="width:80%; border:0; border-top:1px solid #eee; margin:30px auto;">
+            <table class="desc-table">
+                <thead><tr><th>功能</th><th>說明</th></tr></thead>
+                <tbody>
+                    <tr><td>基本檢索</td><td>支援關鍵字、注音、拼音、部首、筆畫。關鍵字支援 <b>*</b> 萬用字元。</td></tr>
+                    <tr><td>釋義檢索</td><td>全文比對兩部辭典之釋義與典故 (需 2 字以上)。</td></tr>
+                    <tr><td>智慧雙顯</td><td>依收錄情況自動極大化顯示空間。</td></tr>
+                    <tr><td>權限記憶</td><td>選取後自動記憶路徑，下次點擊恢復即可秒開。</td></tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    // 渲染部首表時交給統一判斷處理
+    renderHomeList();
+}
+
+function goHome() {
+    document.getElementById('list').innerHTML = ""; window.currentView = [];
+    document.querySelectorAll('header input').forEach(i => i.value = "");
+    renderHome(); updateNav();
+}
+
+// --- Utilities ---
+function isZhuyin(text) { return /^[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9\s]+$/.test(text); }
+function isSearchNumber(text) { const num = parseInt(text); return !isNaN(num) && num >= 1 && num <= 36 && /^\d+$/.test(text); }
+
+function highlightPosTags(text) {
+    if (!text) return "";
+    const posList = ["介", "代", "代、介", "代、助", "副", "助", "動", "名", "嘆", "形", "擬", "歎", "綴", "連", "量"];
+    return text.replace(new RegExp(`\\[(${posList.join('|')})\\]`, 'g'), (m, p1) => `<span class="pos-box">${p1}</span>`);
+}
+
+function processImages(text, isTitle = false, dictType = 'A') {
+    if (!text) return "";
+    const imgClass = isTitle ? "ext-img title-img" : "ext-img";
+    return text.replace(/&([^;]+\.(?:png|gif|jpg|jpeg));/gi, (match, fileName) => {
+        const folder = dictType === 'A' ? "dict_revised_2015_20251229_utf8無法轉出的字圖" : "dict_idioms_pic_2020_20251224/char";
+        return `<img src="${folder}/${fileName.trim()}" class="${imgClass}" alt="${fileName}" onerror="this.replaceWith('${match}')">`;
+    });
+}
+
+function safeHighlight(text, keyword) {
+    if (!keyword || !text) return text;
+    const safeKw = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${safeKw})`, 'gi');
+    let parts = text.split(/(<[^>]+>)/g);
+    for (let i = 0; i < parts.length; i++) {
+        if (!parts[i].startsWith('<')) {
+            parts[i] = parts[i].replace(regex, '<mark class="match-highlight">$1</mark>');
+        }
+    }
+    return parts.join('');
+}
+
+function formatHangingIndent(text) {
+    if (!text) return "";
+    let lines = text.split(/[\r\n]+/);
+    return lines.map(line => {
+        let t = line.trim();
+        if (/^(\d+\.|[（\(][一二三四五六七八九十]+[）\)])/.test(t)) {
+            return `<div class="hanging-indent">${t}</div>`;
+        } else if (t) {
+            return `<div class="normal-indent">${t}</div>`;
+        }
+        return '';
+    }).join('');
+}
+
+function formatUsageExample(text) {
+    if (!text) return "";
+    return text.split(/[\r\n]+/).filter(l => l.trim()).map((l, idx) => `<div class="hanging-indent">${idx + 1}. ${l.trim()}</div>`).join('');
+}
+
+function formatSourceContent(text) {
+    if (!text) return "";
+    let str = text.replace(/\*(\d+)\*([^\r\n]+)(?:\r?\n)?/g, (match, p1, p2) => {
+        let circle = CIRCLE_NUMS[parseInt(p1) - 1] || `(${p1})`;
+        return `${p2.trim()}<sup style="color:#777; font-size:0.85em; margin-left:1px;">${circle}</sup>`;
+    });
+    return str.replace(/[\r\n]+/g, '');
+}
+
+function formatSourceNote(text) {
+    if (!text) return "";
+    let lines = text.split(/[\r\n]+/).filter(l => l.trim());
+    return lines.map((line, idx) => {
+        let circle = CIRCLE_NUMS[idx] || `(${idx+1})`;
+        return `<div class="normal-indent"><span style="color:#666; font-weight:bold; margin-right:4px;">${circle}</span>${line}</div>`;
+    }).join('');
+}
+
+function formatDiffExample(text) {
+    if (!text) return "";
+    if (!text.includes('\t')) return formatUsageExample(text); 
+    
+    let lines = text.split(/[\r\n]+/).filter(l => l.trim());
+    if (lines.length < 2) return text;
+    
+    let headers = lines[0].split('\t').map(s => s.trim());
+    let html = `<table class="diff-table"><thead><tr>`;
+    headers.forEach(h => html += `<th>${h}</th>`);
+    html += `<th>例句</th></tr></thead><tbody>`;
+    
+    for (let i = 1; i < lines.length; i++) {
+        let cols = lines[i].split('\t').map(s => s.trim());
+        html += `<tr>`;
+        for(let j = 0; j < headers.length; j++) {
+            let mark = cols[j] || '';
+            if (mark === '○') html += `<td style="color:#2e7d32; font-weight:bold; text-align:center;">${mark}</td>`;
+            else if (mark === 'ㄨ' || mark === '×' || mark === 'X') html += `<td style="color:#d32f2f; font-weight:bold; text-align:center;">${mark}</td>`;
+            else html += `<td style="text-align:center;">${mark}</td>`;
+        }
+        let sentence = cols.slice(headers.length).join('\t');
+        html += `<td>${sentence}</td></tr>`;
+    }
+    html += `</tbody></table>`;
+    return html;
+}
+
+function sortResultsA(results) {
+    return results.sort((a, b) => {
+        if (a['字詞名'].length !== b['字詞名'].length) return a['字詞名'].length - b['字詞名'].length;
+        return parseInt(a['多音排序'] || '0') - parseInt(b['多音排序'] || '0');
+    });
+}
+function sortResultsA_byOuterStroke(results) { return results.sort((a, b) => (parseInt(a['部首外筆畫數']) || 0) - (parseInt(b['部首外筆畫數']) || 0)); }
+function sortResultsB(results) { return results.sort((a, b) => a['成語'].length - b['成語'].length); }
+
+// --- Search Engine ---
+const searchInput = document.getElementById('search');
+const defSearchInput = document.getElementById('defSearch');
+
+function triggerSearch(q) {
+    let radStrokeMatch = q.match(/^(.*?)部(\d+)$/);
+    if (/^\d+$/.test(q)) {
+        jumpToStrokeCount(q);
+    } else if (isZhuyin(q)) {
+        jumpToZhuyin(q);
+    } else if (q.includes('*')) {
+        performWildcardSearch(q);
+    } else if (radStrokeMatch && RADICAL_LIST.includes(radStrokeMatch[1])) {
+        jumpToRadicalAndStroke(radStrokeMatch[1], radStrokeMatch[2]);
+    } else if (q.endsWith("部") && RADICAL_LIST.includes(q.slice(0, -1))) {
+        performTieredSearch(q, 'basic', q.slice(0, -1));
+    } else if (/^[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü\s\-\d]+$/i.test(q)) {
+        q = applyToneToPinyin(q); 
+        const hasTone = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/.test(q);
+        let qTrim = q.replace(/[\s\d]+/g, '');
+        if (!hasTone && qTrim.length === 1) {
+            renderList([], "漢語拼音檢索結果", "⚠️ 無聲調拼音請輸入 2 個字母以上");
+        } else {
+            performPinyinSearch(q);
+        }
+    } else {
+        performTieredSearch(q, 'basic');
+    }
+}
+
+searchInput.oninput = function() {
+    defSearchInput.value = "";
+    const q = this.value.trim();
+    
+    const searchHint = document.getElementById('search-hint');
+    if (q.endsWith("部") && RADICAL_LIST.includes(q.slice(0, -1))) {
+        searchHint.style.display = "inline-block";
+    } else {
+        searchHint.style.display = "none";
+    }
+    
+    if (!q) { renderHomeList(); return; }
+    
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { triggerSearch(q); }, 300);
+};
+
+defSearchInput.oninput = function() {
+    searchInput.value = "";
+    document.getElementById('search-hint').style.display = "none";
+    const q = this.value.trim();
+    if (q.length === 1) { renderList([], "釋義全文檢索結果", "⚠️ 釋義檢索請輸入 2 字以上"); return; }
+    if (q.length === 0) { renderHomeList(); return; }
+    
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { performTieredSearch(q, 'definition'); }, 300);
+};
+
+[searchInput, defSearchInput].forEach(el => {
+    el.onkeydown = function(e) { if (e.key === 'Enter') { const firstItem = document.querySelector('.item'); if (firstItem) { firstItem.click(); this.blur(); } } };
+});
+
+function mergeResults(resA, resB, extraInfoKeyA = null) {
+    let merged = [];
+    let mapB = new Map();
+    resB.forEach(i => mapB.set(i['成語'], i)); 
+
+    resA.forEach(i => {
+        let w = i['字詞名'];
+        let inB = mapB.has(w);
+        let itemB = inB ? mapB.get(w) : null;
+        let extra = extraInfoKeyA ? i[extraInfoKeyA] : '';
+        merged.push({ word: w, zyA: i['注音一式'], zyB: inB ? itemB['注音'] : '', fromA: true, fromB: inB, origA: i, origB: itemB, extra: extra });
+    });
+
+    resB.forEach(i => {
+        let w = i['成語'];
+        if (!resA.some(a => a['字詞名'] === w)) {
+            merged.push({ word: w, zyA: '', zyB: i['注音'], fromA: false, fromB: true, origA: null, origB: i, extra: '' });
+        }
+    });
+    return merged;
+}
+
+function performWildcardSearch(q) {
+    const el = document.getElementById('list'); el.innerHTML = ""; window.currentView = [];
+    const escapeRegExp = string => string.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+    let regexPattern = '^' + q.split('*').map(escapeRegExp).join('.*') + '$';
+    let regex;
+    try { regex = new RegExp(regexPattern); } catch(e) { renderList([], "萬用字元檢索結果", "無效的字元"); return; }
+    const mainA = sortResultsA(dataStoreA.filter(i => regex.test(i['字詞名'])));
+    const mainB = sortResultsB(dataStoreB.filter(i => regex.test(i['成語'])));
+    renderListSegment(mergeResults(mainA, mainB), "萬用字元檢索結果", false);
+    el.scrollTop = 0;
+}
+
+function performPinyinSearch(q) {
+    q = q.toLowerCase().replace(/\d+/g, '').trim();
+    const hasTone = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/.test(q);
+    const escapeQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(^|[\\s\\-])` + escapeQ);
+    
+    let resA = dataStoreA.filter(i => {
+        let py = (i['漢語拼音'] || '').toLowerCase();
+        return regex.test(hasTone ? py : removePinyinTones(py));
+    });
+    let resB = dataStoreB.filter(i => {
+        let py = (i['漢語拼音'] || '').toLowerCase();
+        return regex.test(hasTone ? py : removePinyinTones(py));
+    });
+    
+    renderList(mergeResults(sortResultsA(resA), sortResultsB(resB), '漢語拼音').slice(0,100), "漢語拼音檢索結果");
+    document.getElementById('list').scrollTop = 0;
+}
+
+function performTieredSearch(q, primaryMode, specialRadical = null) {
+    const el = document.getElementById('list'); el.innerHTML = ""; window.currentView = [];
+    
+    if (primaryMode === 'basic') {
+        const mainA = sortResultsA(dataStoreA.filter(i => i['字詞名'].includes(q)));
+        const mainB = sortResultsB(dataStoreB.filter(i => i['成語'].includes(q)));
+        let mainMerged = mergeResults(mainA, mainB);
+        
+        if (specialRadical) {
+            if(mainMerged.length > 0) renderListSegment(mainMerged, "基本檢索結果", false);
+            let resA = sortResultsA_byOuterStroke(dataStoreA.filter(i => (i['部首字']||'').trim()===specialRadical));
+            let mergedRad = mergeResults(resA, [], '部首外筆畫數'); 
+            mergedRad.forEach(m => { if(m.extra) m.extra += ' 畫'; });
+            if(mergedRad.length > 0) renderListSegment(mergedRad, "部首檢索結果", false);
+            else if(mainMerged.length === 0) renderListSegment([], "檢索結果", false);
+            el.scrollTop = 0;
+            return;
+        }
+
+        renderListSegment(mainMerged, "基本檢索結果", false);
+        
+        if (mainMerged.length <= 3 && q.length >= 2) {
+            const simA = sortResultsA(dataStoreA.filter(i => (i['相似詞'] || '').includes(q)));
+            const simB = sortResultsB(dataStoreB.filter(i => (i['近義成語'] || '').includes(q) || (i['參考詞語'] || '').includes(q)));
+            let simMerged = mergeResults(simA, simB).filter(item => !mainMerged.some(m => m.word === item.word));
+            if (simMerged.length > 0) renderListSegment(simMerged, "相似/參考詞檢索結果", true);
+            
+            const oppA = sortResultsA(dataStoreA.filter(i => (i['相反詞'] || '').includes(q)));
+            const oppB = sortResultsB(dataStoreB.filter(i => (i['反義成語'] || '').includes(q)));
+            let oppMerged = mergeResults(oppA, oppB).filter(item => !mainMerged.some(m => m.word === item.word));
+            if (oppMerged.length > 0) renderListSegment(oppMerged, "相反詞檢索結果", true);
+            
+            const defA = sortResultsA(dataStoreA.filter(i => (i['釋義'] || '').includes(q)));
+            const defB = sortResultsB(dataStoreB.filter(i => 
+                (i['釋義'] || '').includes(q) || (i['典源文獻名稱'] || '').includes(q) || (i['典源文獻內容'] || '').includes(q) || 
+                (i['典源注解'] || '').includes(q) || (i['典源參考資料'] || '').includes(q) || (i['典故說明'] || '').includes(q) || 
+                (i['書證'] || '').includes(q) || (i['用法說明-語義說明'] || '').includes(q) || (i['用法說明-使用類別'] || '').includes(q) || 
+                (i['用法說明-例句'] || '').includes(q) || (i['辨識-形音辨誤'] || '').includes(q) || (i['辨識-同'] || '').includes(q) || 
+                (i['辨識-異'] || '').includes(q) || (i['辨識-例句'] || '').includes(q)
+            ));
+            let defMerged = mergeResults(defA, defB).filter(item => 
+                !mainMerged.some(m => m.word === item.word) && 
+                !simMerged.some(m => m.word === item.word) && 
+                !oppMerged.some(m => m.word === item.word)
+            );
+            if (defMerged.length > 0) renderListSegment(defMerged, "全文參考結果", true);
+        }
+    } else {
+        const defA = sortResultsA(dataStoreA.filter(i => (i['釋義'] || '').includes(q)));
+        const defB = sortResultsB(dataStoreB.filter(i => 
+            (i['釋義'] || '').includes(q) || (i['典源文獻名稱'] || '').includes(q) || (i['典源文獻內容'] || '').includes(q) || 
+            (i['典源注解'] || '').includes(q) || (i['典源參考資料'] || '').includes(q) || (i['典故說明'] || '').includes(q) || 
+            (i['書證'] || '').includes(q) || (i['用法說明-語義說明'] || '').includes(q) || (i['用法說明-使用類別'] || '').includes(q) || 
+            (i['用法說明-例句'] || '').includes(q) || (i['辨識-形音辨誤'] || '').includes(q) || (i['辨識-同'] || '').includes(q) || 
+            (i['辨識-異'] || '').includes(q) || (i['辨識-例句'] || '').includes(q)
+        ));
+        let defMerged = mergeResults(defA, defB);
+        renderListSegment(defMerged, "釋義全文檢索結果", false);
+        
+        if (defMerged.length === 0) {
+            const fbBasicA = sortResultsA(dataStoreA.filter(i => i['字詞名'].includes(q)));
+            const fbBasicB = sortResultsB(dataStoreB.filter(i => i['成語'].includes(q)));
+            let fbBasicMerged = mergeResults(fbBasicA, fbBasicB);
+            if (fbBasicMerged.length > 0) renderListSegment(fbBasicMerged, "基本檢索結果", true);
+            
+            const simA = sortResultsA(dataStoreA.filter(i => (i['相似詞'] || '').includes(q)));
+            const simB = sortResultsB(dataStoreB.filter(i => (i['近義成語'] || '').includes(q) || (i['參考詞語'] || '').includes(q)));
+            let simMerged = mergeResults(simA, simB);
+            if (simMerged.length > 0) renderListSegment(simMerged, "相似/參考詞檢索結果", true);
+        }
+    }
+    el.scrollTop = 0;
+}
+
+function renderListSegment(list, type, isFallback) {
+    const el = document.getElementById('list');
+    let html = `<div class="list-header ${isFallback ? 'fallback' : ''}">${isFallback ? '參考: ' : ''}${type}</div>`;
+    if (list.length === 0) {
+        html += `<div style="padding:15px; color:#999; text-align:center;">查無資料</div>`;
+    } else {
+        let wordCounts = {}; list.forEach(i => { wordCounts[i.word] = (wordCounts[i.word] || 0) + 1; });
+        let wordSeen = {};
+
+        html += list.slice(0, 100).map((item) => {
+            const globalIdx = window.currentView.length; window.currentView.push(item);
+            let dots = "";
+            if(item.fromA) dots += `<div class="dot-A" title="國語辭典"></div>`;
+            if(item.fromB) dots += `<div class="dot-B" title="成語典"></div>`;
+            
+            let numBadge = "";
+            if (wordCounts[item.word] > 1 && item.fromA) {
+                wordSeen[item.word] = (wordSeen[item.word] || 0) + 1;
+                numBadge = `<span class="multi-badge">${wordSeen[item.word]}</span>`;
+            }
+            
+            let zy = item.zyA || item.zyB || '';
+            zy = zy.split(/\s+/).map(s => `<span style="white-space:nowrap;">${s}</span>`).join(' ');
+            let extraHtml = item.extra ? `<span style="color:var(--accent); font-weight:bold; margin-left:10px;">${item.extra}</span>` : '';
+            
+            const wTitle = Array.from(item.word).map(t=>t).join('');
+            
+            return `
+                <div class="item" data-idx="${globalIdx}" onclick="handleItemClick(this)">
+                    <div class="w-title">${processImages(wTitle, true, item.fromA ? 'A' : 'B')}${numBadge}<div class="item-source-dots">${dots}</div></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#999;">
+                        <span>${zy}</span>
+                        ${extraHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    el.innerHTML += html;
+}
+
+function renderList(list, type, errorMsg = "") {
+    const el = document.getElementById('list'); el.innerHTML = ""; window.currentView = [];
+    if (errorMsg) el.innerHTML = `<div class="list-header">${type}</div><div style="padding:20px; color:orange; font-size:14px; text-align:center; font-weight:bold;">${errorMsg}</div>`;
+    else renderListSegment(list, type, false);
+    el.scrollTop = 0;
+}
+
+function handleItemClick(element) {
+    const idx = parseInt(element.getAttribute('data-idx')); 
+    const item = window.currentView[idx];
+    pushHistory(item.word); 
+    renderDualDetail(item.word, item.origA, item.origB);
+    document.querySelectorAll('.item').forEach(el => el.classList.remove('active')); element.classList.add('active');
+}
+
+function pushHistory(word) { if (navHistory[navIdx] === word) return; navHistory = navHistory.slice(0, navIdx + 1); navHistory.push(word); navIdx++; updateNav(); }
+function updateNav() { document.getElementById('btnPrev').disabled = (navIdx <= 0); document.getElementById('btnNext').disabled = (navIdx >= navHistory.length - 1); }
+function navBack() { if (navIdx > 0) { navIdx--; jumpTo(navHistory[navIdx], false); } }
+function navForward() { if (navIdx < navHistory.length - 1) { navIdx++; jumpTo(navHistory[navIdx], false); } }
+
+// --- Dual Detail Rendering ---
+function renderDualDetail(word, passedA = null, passedB = null) {
+    const exactA = passedA || sortResultsA(dataStoreA.filter(i => i['字詞名'] === word))[0];
+    const exactB = passedB || sortResultsB(dataStoreB.filter(i => i['成語'] === word))[0];
+    
+    document.getElementById('detail-container').innerHTML = `
+        <div id="detailA" class="dict-panel hidden"><div class="dict-badge badge-A">國語辭典</div><div class="panel-content"></div></div>
+        <div id="detailB" class="dict-panel hidden"><div class="dict-badge badge-B">成語典</div><div class="panel-content"></div></div>
+    `;
+    
+    const panelA = document.getElementById('detailA');
+    const panelB = document.getElementById('detailB');
+    
+    const dqRaw = defSearchInput.value.trim() || searchInput.value.trim();
+    const dq = (!dqRaw.includes('*') && dqRaw.length >= 2 && !(/^[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü\s\-]+$/i.test(dqRaw))) ? dqRaw : "";
+
+    // 【修改點】獨立抽出標題處理邏輯，確保圖片代碼不被切碎，中文字依然可點擊
+    const buildTitleHTML = (w, dictType) => {
+        const imgRegex = /&([^;]+\.(?:png|gif|jpg|jpeg));/gi;
+        let result = "";
+        let lastIdx = 0;
+        let match;
+        while ((match = imgRegex.exec(w)) !== null) {
+            let text = w.substring(lastIdx, match.index);
+            if (text) result += Array.from(text).map(t => `<span class="char-link" onclick="jumpTo('${t}')">${t}</span>`).join('');
+            result += processImages(match[0], true, dictType);
+            lastIdx = imgRegex.lastIndex;
+        }
+        let text = w.substring(lastIdx);
+        if (text) result += Array.from(text).map(t => `<span class="char-link" onclick="jumpTo('${t}')">${t}</span>`).join('');
+        return result;
+    };
+
+    // Render Dict A
+    if (dataStoreA.length > 0) {
+        panelA.classList.remove('hidden');
+        if (!exactA) {
+            panelA.querySelector('.panel-content').innerHTML = `<div class="empty-msg">國語辭典無收錄此詞</div>`;
+        } else {
+            let htmlA = `<h1 style="font-size:45px; margin:0 0 20px 0; letter-spacing:2px;">${buildTitleHTML(word, 'A')}</h1>`;
+            
+            let rad = exactA["部首字"] ? exactA["部首字"].trim() : "";
+            let outStroke = exactA["部首外筆畫數"] ? exactA["部首外筆畫數"].trim() : "";
+            let totStroke = exactA["總筆畫數"] ? exactA["總筆畫數"].trim() : "";
+            let strokeHtml = "";
+            if(rad) strokeHtml += `<span class="radical-tag" onclick="jumpToRadical('${rad}')">${rad}部</span>`;
+            if(outStroke) strokeHtml += `<span style="margin:0 5px; font-weight:bold; color:#555;">${outStroke} 畫</span>`;
+            if(totStroke) strokeHtml += `<span style="margin:0 5px; color:#555;">共 <span class="stroke-tag" onclick="jumpToStrokeCount('${totStroke}')">${totStroke} 畫</span></span>`;
+            if(strokeHtml) htmlA += `<div class="field"><span class="label">部首筆畫</span><span class="content" style="display:flex; align-items:center;">[${strokeHtml}]</span></div>`;
+
+            HEADERS_A.forEach(h => {
+                const val = exactA[h]; 
+                if (!val || h === "字詞名" || h === "字數" || h === "字詞號" || h === "部首字" || h === "總筆畫數" || h === "部首外筆畫數") return;
+                if (h === "多音排序" && (val === "0" || val === "00")) return;
+                
+                let dVal = processImages(val, false, 'A');
+                let hLabel = h.startsWith("變體類型") ? "變體類型" : (h === "多音參見訊息" ? "多音參見" : h); 
+                if (hLabel === "注音一式") hLabel = "注音";
+                if (hLabel === "變體漢語拼音") hLabel = "變體拼音";
+                
+                if (h === "釋義") { 
+                    dVal = highlightPosTags(dVal);
+                    dVal = formatHangingIndent(dVal);
+                } else if (h === "注音一式") {
+                    dVal = val.split(/\s+/).map(z => `<span class="zhuyin-tag" onclick="jumpToZhuyin('${z.trim()}')">${z.trim()}</span>`).join(' ');
+                } else if (h === "相似詞" || h === "相反詞") {
+                    dVal = val.split(/[、,，]/).map(w => `<span class="tag" onclick="jumpTo('${w.trim()}')">${w.trim()}</span>`).join('');
+                } else if (h === "多音參見訊息") {
+                    dVal = dVal.replace(/(?:（)?(\d+)(?:）)?/g, (match, p1) => `<span class="char-link" style="color:var(--accent); font-weight:bold;" onclick="jumpToId('${p1}')">${match}</span>`);
+                }
+                
+                dVal = safeHighlight(dVal, dq);
+                htmlA += `<div class="field"><span class="label">${hLabel}</span><span class="content">${dVal}</span></div>`;
+            });
+            panelA.querySelector('.panel-content').innerHTML = htmlA;
+        }
+    }
+
+    // Render Dict B
+    if (dataStoreB.length > 0) {
+        panelB.classList.remove('hidden');
+        if (!exactB) {
+            panelB.querySelector('.panel-content').innerHTML = `<div class="empty-msg">成語典無收錄此詞</div>`;
+        } else {
+            let htmlB = `<h1 style="font-size:45px; margin:0 0 20px 0; letter-spacing:2px; color: var(--dictB-color);">${buildTitleHTML(word, 'B')}</h1>`;
+            
+            const appendB = (label, content, isBlock = false) => {
+                if(!content) return;
+                let hl = safeHighlight(content, dq);
+                let style = isBlock ? 'style="display:block; width:100%;"' : '';
+                htmlB += `<div class="field"><span class="label">${label}</span><span class="content" ${style}>${hl}</span></div>`;
+            };
+
+            let zyVal = exactB["注音"];
+            if (zyVal) {
+                let zyTags = zyVal.split(/\s+/).map(z => `<span class="zhuyin-tag" onclick="jumpToZhuyin('${z.trim()}')">${z.trim()}</span>`).join(' ');
+                appendB("注音", zyTags);
+            }
+            appendB("漢語拼音", exactB["漢語拼音"]);
+            
+            let defVal = exactB["釋義"];
+            if (defVal) {
+                defVal = processImages(defVal, false, 'B');
+                defVal = highlightPosTags(defVal);
+                appendB("釋義", formatHangingIndent(defVal));
+            }
+            
+            const grpSource = ["典源文獻名稱", "典源文獻內容", "典源注解", "典源參考資料", "典故說明"];
+            if (grpSource.some(h => exactB[h])) {
+                htmlB += `<div class="group-header">典源</div>`;
+                let nameStr = exactB["典源文獻名稱"] || ''; 
+                let contStr = exactB["典源文獻內容"] || '';
+                let noteStr = exactB["典源注解"] || ''; 
+                let refStr = exactB["典源參考資料"] || '';
+                let expStr = exactB["典故說明"] || '';
+
+                let isMulti = nameStr.includes('\n') || contStr.match(/[＆&＋+◎]/) || noteStr.match(/[＆&＋+◎]/) || refStr.match(/[＆&＋+◎]/) || expStr.match(/[＆&＋+◎]/);
+                
+                const isNoise = (s) => !s || /^[\s#＆&＋+◎]*$/.test(s);
+
+                if (isMulti) {
+                    let nameArr = nameStr.split(/\r?\n/);
+                    let contArr = contStr.split(/[＆&＋+◎]/);
+                    let noteArr = noteStr.split(/[＆&＋+◎]/);
+                    let refArr = refStr.split(/[＆&＋+◎]/);
+                    let expArr = expStr.split(/[＆&＋+◎]/);
+                    
+                    let maxLen = Math.max(nameArr.length, contArr.length, noteArr.length, refArr.length, expArr.length);
+                    let numMap = ['一','二','三','四','五','六','七','八','九','十'];
+                    
+                    for(let i=0; i<maxLen; i++) {
+                        let nItem = nameArr[i] || '';
+                        let cItem = contArr[i] || '';
+                        let ntItem = noteArr[i] || '';
+                        let rItem = refArr[i] || '';
+                        let eItem = expArr[i] || '';
+
+                        if (isNoise(nItem) && isNoise(cItem) && isNoise(ntItem) && isNoise(rItem) && isNoise(eItem)) continue;
+
+                        htmlB += `<div class="sub-group-header">典源${numMap[i] || (i+1)}</div>`;
+                        
+                        let hasNumbering = false;
+
+                        if (!isNoise(nItem)) {
+                            if (nItem.match(/\*(\d+)\*/)) hasNumbering = true;
+                            let text = nItem.replace(/#/g, '').replace(/\*(\d+)\*/g, (m, d) => `<sup style="color:#777; font-size:0.85em; margin-left:1px;">${CIRCLE_NUMS[d-1] || '('+d+')'}</sup>`);
+                            appendB("文獻名稱", processImages(text.trim(), false, 'B'));
+                        }
+                        
+                        if (!isNoise(cItem)) {
+                            if (cItem.match(/\*(\d+)\*/)) hasNumbering = true;
+                            let text = cItem.replace(/#/g, '').replace(/\*(\d+)\*([^\r\n，。；！？、]+)/g, (m, d, w) => {
+                                return `${w.trim()}<sup style="color:#777; font-size:0.85em; margin-left:1px;">${CIRCLE_NUMS[d-1] || '('+d+')'}</sup>`;
+                            });
+                            text = text.replace(/[\r\n]+/g, ''); 
+                            appendB("文獻內容", processImages(text.trim(), false, 'B'));
+                        }
+                        
+                        if (!isNoise(ntItem)) {
+                            let lines = ntItem.split(/\r?\n/).map(l => l.replace(/#/g, '').trim()).filter(l => l !== "" && !/^([＆&＋+◎]+)$/.test(l));
+                            
+                            if (lines.length > 0) {
+                                let text = lines.map((line, idx) => {
+                                    if (hasNumbering) {
+                                        let circle = CIRCLE_NUMS[idx] || `(${idx+1})`;
+                                        return `<div class="normal-indent"><span style="color:#666; font-weight:bold; margin-right:4px;">${circle}</span>${line}</div>`;
+                                    } else {
+                                        return `<div class="normal-indent">${line}</div>`;
+                                    }
+                                }).join('');
+                                appendB("注解", processImages(text, false, 'B'));
+                            }
+                        }
+                        
+                        if (!isNoise(rItem)) {
+                            appendB("參考資料", processImages(rItem.replace(/#/g, '').trim().replace(/[\r\n]+/g,'<br>'), false, 'B'));
+                        }
+
+                        if (!isNoise(eItem)) {
+                            appendB("典故說明", processImages(eItem.replace(/#/g, '').trim(), false, 'B'));
+                        }
+                    }
+                } else {
+                    let hasNumbering = false;
+                    
+                    if(nameStr) {
+                        if (nameStr.match(/\*(\d+)\*/)) hasNumbering = true;
+                        let text = nameStr.replace(/#/g, '').replace(/\*(\d+)\*/g, (m, d) => `<sup style="color:#777; font-size:0.85em; margin-left:1px;">${CIRCLE_NUMS[d-1] || '('+d+')'}</sup>`);
+                        appendB("文獻名稱", processImages(text, false, 'B'));
+                    }
+                    if(contStr) {
+                        if (contStr.match(/\*(\d+)\*/)) hasNumbering = true;
+                        let text = contStr.replace(/#/g, '').replace(/\*(\d+)\*([^\r\n，。；！？、]+)/g, (m, d, w) => {
+                            return `${w.trim()}<sup style="color:#777; font-size:0.85em; margin-left:1px;">${CIRCLE_NUMS[d-1] || '('+d+')'}</sup>`;
+                        });
+                        text = text.replace(/[\r\n]+/g, '');
+                        appendB("文獻內容", processImages(text, false, 'B'));
+                    }
+                    if(noteStr && !isNoise(noteStr)) {
+                        let lines = noteStr.split(/\r?\n/).map(l => l.replace(/#/g, '').trim()).filter(l => l !== "" && !/^([＆&＋+◎]+)$/.test(l));
+                        if (lines.length > 0) {
+                            let text = lines.map((line, idx) => {
+                                if (hasNumbering) {
+                                    let circle = CIRCLE_NUMS[idx] || `(${idx+1})`;
+                                    return `<div class="normal-indent"><span style="color:#666; font-weight:bold; margin-right:4px;">${circle}</span>${line}</div>`;
+                                } else {
+                                    return `<div class="normal-indent">${line}</div>`;
+                                }
+                            }).join('');
+                            appendB("注解", processImages(text, false, 'B'));
+                        }
+                    }
+                    if(refStr && !isNoise(refStr)) {
+                        appendB("參考資料", processImages(refStr.replace(/#/g, '').trim().replace(/[\r\n]+/g,'<br>'), false, 'B'));
+                    }
+                    if(expStr && !isNoise(expStr)) {
+                        appendB("典故說明", processImages(expStr.replace(/#/g, '').trim(), false, 'B'));
+                    }
+                }
+            }
+            
+            ["書證"].forEach(h => { if(exactB[h]) appendB(h, processImages(exactB[h], false, 'B')); });
+            
+            const grpUsage = ["用法說明-語義說明", "用法說明-使用類別", "用法說明-例句"];
+            if (grpUsage.some(h => exactB[h])) {
+                htmlB += `<div class="group-header">用法說明</div>`;
+                let semStr = exactB["用法說明-語義說明"] || ''; let catStr = exactB["用法說明-使用類別"] || ''; let exStr = exactB["用法說明-例句"] || '';
+                
+                if (semStr.includes('＆') || semStr.includes('&') || catStr.includes('＆') || exStr.includes('＆')) {
+                    let semArr = semStr.split(/[＆&]/); let catArr = catStr.split(/[＆&]/); let exArr = exStr.split(/[＆&]/);
+                    let maxLen = Math.max(semArr.length, catArr.length, exArr.length);
+                    let numMap = ['一','二','三','四','五','六','七','八','九','十'];
+                    
+                    for(let i=0; i<maxLen; i++) {
+                        htmlB += `<div class="sub-group-header">用法${numMap[i] || (i+1)}</div>`;
+                        if(semArr[i] && semArr[i].trim()) appendB("語義說明", processImages(semArr[i].trim(), false, 'B'));
+                        if(catArr[i] && catArr[i].trim()) appendB("使用類別", processImages(catArr[i].trim(), false, 'B'));
+                        if(exArr[i] && exArr[i].trim()) appendB("例句", processImages(formatUsageExample(exArr[i]), false, 'B'));
+                    }
+                } else {
+                    if(semStr) appendB("語義說明", processImages(semStr, false, 'B'));
+                    if(catStr) appendB("使用類別", processImages(catStr, false, 'B'));
+                    if(exStr) appendB("例句", processImages(formatUsageExample(exStr), false, 'B'));
+                }
+            }
+            
+            const grpDiff = ["辨識-形音辨誤", "辨識-同", "辨識-異", "辨識-例句"];
+            if (grpDiff.some(h => exactB[h])) {
+                htmlB += `<div class="group-header">辨識</div>`;
+                grpDiff.forEach(h => { 
+                    if(exactB[h]) {
+                        let content = h === "辨識-例句" ? formatDiffExample(exactB[h]) : exactB[h];
+                        let isBlock = h === "辨識-例句" && exactB[h].includes('\t');
+                        appendB(h.replace('辨識-',''), processImages(content, false, 'B'), isBlock);
+                    }
+                });
+            }
+            
+            ["近義成語", "反義成語", "參考詞語"].forEach(h => {
+                if(exactB[h]) {
+                    let dVal = processImages(exactB[h], false, 'B').split(/[、,，]/).map(w => `<span class="tag" onclick="jumpTo('${w.trim()}')">${w.trim()}</span>`).join('');
+                    appendB(h, dVal);
+                }
+            });
+            panelB.querySelector('.panel-content').innerHTML = htmlB;
+        }
+    }
+
+    if (dataStoreA.length > 0 && dataStoreB.length > 0) {
+        if (exactA && exactB) { 
+            panelA.style.flex = "1"; panelB.style.flex = "1"; 
+            panelA.style.padding = "20px 15px"; panelB.style.padding = "20px 15px";
+        } 
+        else if (exactA && !exactB) { 
+            panelA.style.flex = "10"; panelB.style.flex = "0 0 50px"; 
+            panelA.style.padding = "20px 15px"; panelB.style.padding = "0 15px";
+        } 
+        else if (!exactA && exactB) { 
+            panelA.style.flex = "0 0 50px"; panelB.style.flex = "10"; 
+            panelA.style.padding = "0 15px"; panelB.style.padding = "20px 15px";
+        }
+    } else {
+        if(panelA) panelA.style.padding = "20px 15px";
+        if(panelB) panelB.style.padding = "20px 15px";
+    }
+    
+    panelA.scrollTop = 0; panelB.scrollTop = 0;
+    bindSelectionEvents();
+}
+
+function jumpToId(id) {
+    const exactA = dataStoreA.find(i => i['字詞號'] === id);
+    if (exactA) {
+        let word = exactA['字詞名'];
+        pushHistory(word); searchInput.value = word; defSearchInput.value = "";
+        let merged = mergeResults([exactA], sortResultsB(dataStoreB.filter(i => i['成語'] === word)));
+        renderList(merged, "參見檢索結果"); renderDualDetail(word, exactA, merged[0] ? merged[0].origB : null); updateNav();
+    }
+}
+
+function jumpToRadicalAndStroke(rad, strokes) {
+    searchInput.value = rad + "部" + strokes; defSearchInput.value = "";
+    let resA = sortResultsA(dataStoreA.filter(i => (i['部首字']||'').trim()===rad && (i['部首外筆畫數']||'').trim()===strokes));
+    let merged = mergeResults(resA, [], '部首外筆畫數');
+    merged.forEach(m => { if(m.extra) m.extra += ' 畫'; });
+    renderList(merged.slice(0,100), "部首筆畫檢索結果"); document.getElementById('list').scrollTop = 0;
+}
+
+function jumpToRadical(rad) { 
+    searchInput.value = rad + "部"; defSearchInput.value = ""; 
+    document.getElementById('search-hint').style.display = "inline-block";
+    let resA = sortResultsA_byOuterStroke(dataStoreA.filter(i => (i['部首字']||'').trim()===rad));
+    let merged = mergeResults(resA, [], '部首外筆畫數'); 
+    merged.forEach(m => { if(m.extra) m.extra += ' 畫'; });
+    renderList(merged.slice(0,100), "部首檢索結果"); document.getElementById('list').scrollTop = 0;
+}
+
+function jumpToStrokeCount(num) { 
+    searchInput.value = num; defSearchInput.value = ""; 
+    let merged = mergeResults(sortResultsA(dataStoreA.filter(i => (i['總筆畫數']||'').trim()===num)), []); 
+    renderList(merged.slice(0,100), "筆畫檢索結果"); document.getElementById('list').scrollTop = 0;
+}
+
+function jumpToZhuyin(z) { 
+    searchInput.value = z; defSearchInput.value = ""; 
+    
+    // 長注音整串精準比對 (忽略全半形空白差異)，單音節則陣列包含比對
+    let searchZ = z.replace(/\s+/g, ' ').trim();
+    let isMulti = searchZ.includes(' ');
+    
+    let resA = dataStoreA.filter(i => {
+        let zyStr = (i['注音一式']||'').replace(/\s+/g, ' ').trim();
+        if (isMulti) {
+            return zyStr.includes(searchZ);
+        } else {
+            return zyStr.split(' ').includes(searchZ);
+        }
+    });
+    
+    let resB = dataStoreB.filter(i => {
+        let zyStr = (i['注音']||'').replace(/\s+/g, ' ').trim();
+        if (isMulti) {
+            return zyStr.includes(searchZ);
+        } else {
+            return zyStr.split(' ').includes(searchZ);
+        }
+    });
+    
+    resA.sort((a, b) => {
+        if (a['字詞名'].length !== b['字詞名'].length) return a['字詞名'].length - b['字詞名'].length;
+        let zyStrA = (a['注音一式']||'').replace(/\s+/g, ' ').trim();
+        let aFirst = zyStrA.indexOf(searchZ) === 0 ? 0 : 1;
+        let zyStrB = (b['注音一式']||'').replace(/\s+/g, ' ').trim();
+        let bFirst = zyStrB.indexOf(searchZ) === 0 ? 0 : 1;
+        if (aFirst !== bFirst) return aFirst - bFirst;
+        return (parseInt(a['總筆畫數']) || 0) - (parseInt(b['總筆畫數']) || 0);
+    });
+    
+    resB.sort((a, b) => {
+        if (a['成語'].length !== b['成語'].length) return a['成語'].length - b['成語'].length;
+        let zyStrA = (a['注音']||'').replace(/\s+/g, ' ').trim();
+        let aFirst = zyStrA.indexOf(searchZ) === 0 ? 0 : 1;
+        let zyStrB = (b['注音']||'').replace(/\s+/g, ' ').trim();
+        let bFirst = zyStrB.indexOf(searchZ) === 0 ? 0 : 1;
+        if (aFirst !== bFirst) return aFirst - bFirst;
+        return 0;
+    });
+
+    let merged = mergeResults(resA, resB, '總筆畫數'); 
+    merged.forEach(m => { if(m.extra) m.extra += ' 畫'; });
+    renderList(merged.slice(0,100), "注音檢索結果"); document.getElementById('list').scrollTop = 0;
+}
+
+function jumpTo(word, record = true) { 
+    if (record) pushHistory(word); 
+    searchInput.value = word; defSearchInput.value = ""; 
+    triggerSearch(word); 
+    renderDualDetail(word); updateNav(); 
+}
+
+function jumpToDefinitionSearch(word) { 
+    pushHistory(word); searchInput.value = ""; defSearchInput.value = word; 
+    performTieredSearch(word, 'definition'); 
+}
+
+function toggleModal(s) { document.getElementById('modal-overlay').style.display = s ? 'flex' : 'none'; }
+
+function bindSelectionEvents() {
+    const wrapper = document.getElementById('selection-wrapper'); 
+    const basicBtn = document.getElementById('sel-basic-btn'); 
+    const defBtn = document.getElementById('sel-def-btn');
+    
+    document.querySelectorAll('.dict-panel').forEach(panel => {
+        panel.onmouseup = function(e) {
+            setTimeout(() => {
+                const selection = window.getSelection(); 
+                const selectedText = selection.toString().trim();
+                
+                if (selectedText.length >= 1 && selectedText.length <= 10) {
+                    selectedTextToSearch = selectedText; 
+                    const range = selection.getRangeAt(0); 
+                    const rect = range.getBoundingClientRect(); 
+                    
+                    defBtn.style.display = (selectedText.length >= 2) ? 'inline-block' : 'none'; 
+                    wrapper.style.display = 'flex';
+                    
+                    const wWidth = wrapper.offsetWidth; 
+                    const wHeight = wrapper.offsetHeight;
+                    
+                    wrapper.style.left = `${rect.left + (rect.width / 2) - (wWidth / 2)}px`; 
+                    wrapper.style.top = `${rect.top - wHeight - 8}px`;
+                } else { 
+                    wrapper.style.display = 'none'; 
+                }
+            }, 10);
+        };
+        panel.onscroll = () => wrapper.style.display = 'none';
+    });
+    
+    basicBtn.onmousedown = function(e) { 
+        e.preventDefault(); 
+        if (selectedTextToSearch) { 
+            jumpTo(selectedTextToSearch); 
+            wrapper.style.display = 'none'; 
+        } 
+    };
+    defBtn.onmousedown = function(e) { 
+        e.preventDefault(); 
+        if (selectedTextToSearch) { 
+            jumpToDefinitionSearch(selectedTextToSearch); 
+            wrapper.style.display = 'none'; 
+        } 
+    };
+}
+document.addEventListener('mousedown', (e) => { const wrapper = document.getElementById('selection-wrapper'); if (wrapper && !wrapper.contains(e.target)) wrapper.style.display = 'none'; });
+document.addEventListener('DOMContentLoaded', () => { window.currentView = []; initDB().then(() => renderHome()); });
+</script>
+</body>
+</html>

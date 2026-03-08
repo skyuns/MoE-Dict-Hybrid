@@ -1,0 +1,91 @@
+﻿#language = "V8"
+#async = "on"
+#title="辭典"
+#tooltip="國語辭典與成語典 查詢"
+#icon="MoE_Dict_Search.ico"
+
+/**
+ * 📖 MoE-Dict-Hybrid Search macro for EmEditor
+ * 本巨集專為「MoE-Dict-Hybrid 📖 教育部雙辭典檢索系統 (Web 離線版)」開發
+ * 配套檔案範例：MoE-Dict-Hybrid.html
+ * Developed by skyuns
+ * * 【使用方式】
+ * 1. 在 EmEditor 中選取欲查詢之單詞、注音、漢語拼音或數字（總筆畫）。
+ * 2. 執行此巨集，系統將自動開啟 WebBar 以便檢索。
+ * * 【運作原理】
+ * 1. 環境對齊：自動檢測 WebBar 狀態與路徑，確保辭典介面就緒。
+ * 2. 全能過濾：透過 Regex 保留中文字、注音（含聲調）、漢語拼音（含帶調母音）及數字，
+ *     排除標點符號與無效雜訊。
+ * 3. 授權引導：智慧偵測「恢復權限」按鈕數量，並利用 Shell 模擬鍵盤指令（Tab+Enter）
+ *     引導跳出授權對話框，解決 WebView2 離線讀檔之安全限制。
+ * 4. 非同步驅動：模擬 'input' 事件與雙重 'Enter' 指令，解決非同步渲染時間差，
+ *     確保查詢後直接跳轉至詳細條目內容。
+ */
+
+// ↓↓↓ 請將此處修改為您電腦中 MoE-Dict-Hybrid.html 的實際存放路徑 ↓↓↓
+const sURL = "file:///c:/tool/Dictionary/MoE-Dict-Hybrid.html"; 
+// 路徑格式：在 Windows 環境下，本地路徑建議以 file:/// 開頭，並使用正斜線 / 來分隔資料夾，以確保瀏覽器核心能正確解析。
+
+// 1. 環境初始化
+if( !WebBar.Visible ) { WebBar.Open( sURL ); Quit(); }
+if( !web.window.location.href.toLowerCase().includes("moe-dict-hybrid.html") ) {
+    web.window.location.href = sURL;
+    Quit();
+}
+
+// 2. 選詞與全能過濾
+if( document.selection.IsEmpty ) { document.selection.SelectWord(); }
+
+if( !document.selection.IsEmpty ) {
+    let sRawText = document.selection.Text;
+    
+    // 擴充版 Regex：加入漢語拼音字母與聲調母音
+    const filterRegex = /[^\u4e00-\u9fa50-9\u3105-\u3129\u02ca\u02c7\u02cb\u02d9a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü\s\-]/g;
+    let sCleanText = sRawText.replace(filterRegex, "");
+    
+    if( sCleanText.length > 0 ) {
+        const doc = web.document;
+        const buttons = doc.getElementsByTagName("button");
+        let clickCount = 0;
+
+        // 自動授權偵測
+        for (let i = 0; i < buttons.length; i++) {
+            if (buttons[i].innerText.includes("恢復") && buttons[i].innerText.includes("權限")) {
+                buttons[i].click();
+                clickCount++;
+            }
+        }
+
+        if (clickCount > 0) {
+            WebBar.SetFocus();
+            setTimeout(function() {
+                for (let k = 0; k < clickCount; k++) {
+                    shell.SendKeys("{TAB}"); shell.SendKeys("{ENTER}");
+                }
+            }, 250);
+        }
+
+        // 搜尋發送邏輯
+        const searchDelay = clickCount > 0 ? 600 : 50;
+        setTimeout(function() {
+            const elem = doc.getElementById("search");
+            if( elem ) {
+                elem.value = sCleanText;
+                elem.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                // 等待辭典渲染 (500ms 確保蓋過辭典內部的 300ms 緩衝)
+                setTimeout(function() {
+                    // 第一次嘗試：模擬鍵盤事件觸發搜尋
+                    var enterEvent = new KeyboardEvent('keydown', {
+                        bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13
+                    });
+                    elem.dispatchEvent(enterEvent);
+                    
+                    // 第二次嘗試：物理按鍵補強，確保跳轉到結果內容
+                    WebBar.SetFocus();
+                    setTimeout(function() { shell.SendKeys("{ENTER}"); }, 50);
+                }, 500);
+            }
+        }, searchDelay);
+    }
+}
