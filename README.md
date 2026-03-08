@@ -6,6 +6,16 @@
 
 這是一個純前端、輕量級且無需依賴後端伺服器的網頁版辭典應用程式。本專案將教育部釋出的《重編國語辭典修訂本》與《成語典》開放資料進行深度整合，提供極致流暢的「雙辭典同步檢索」體驗。
 
+## 📂 檔案清單與功能說明
+
+| 檔案名稱 | 類型 | 核心功能與適用環境 |
+| :--- | :--- | :--- |
+| **`MoE-Dict-Hybrid.html`** | 網頁 | **具名主程式檔**。與 `index.html` 內容完全相同，一般使用者下載這個檔案即可。 |
+| **`index.html`** | 網頁 | **主程式介面**。支援 `File System Access API` 權限記憶，為 GitHub Pages 預設入口。 |
+| **`MoE_Dict_Search.jsee`** | 巨集 | **EmEditor 自動化搜尋巨集**。搭配 MoE-Dict-Hybrid.html，具備智慧授權引導功能。 |
+| **`MoE_Dict_Search.ico`** | 圖示 | **巨集識別圖示**。可用於 EmEditor 巨集按鈕。 |
+| **`MoE-Dict-Hybrid-web2.html`** | 網頁 | **兼容版介面**。採用 `FileReader` 邏輯，可在受限環境（如:Total Commander的Liser）下執行。 |
+
 ## ✨ 核心特色與功能
 
 ### 1. 📚 智慧雙顯介面 (Dual-Display System)
