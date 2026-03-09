@@ -29,7 +29,7 @@ const sURL = "file:///c:/tool/Dictionary/MoE-Dict-Hybrid.html";
 // 1. 環境初始化
 if( !WebBar.Visible ) { WebBar.Open( sURL ); Quit(); }
 if( !web.window.location.href.toLowerCase().includes("moe-dict-hybrid.html") ) {
-    web.window.location.href = sURL;
+    WebBar.Open( sURL );
     Quit();
 }
 
@@ -90,3 +90,4 @@ if( !document.selection.IsEmpty ) {
     }
 
 }
+
