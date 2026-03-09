@@ -681,12 +681,6 @@ function mergeResults(resA, resB, extraInfoKeyA = null) {
 }
 
 function performWildcardSearch(q) {
-    // 新增防護機制：如果拔除 * 號後字串為空（代表只輸入 * 或連續的 ***），直接擋掉不檢索
-    if (q.replace(/\*/g, '').trim() === '') {
-        renderList([], "萬用字元檢索結果", "⚠️ 請在 * 號前後輸入字");
-        return;
-    }
-
     const el = document.getElementById('list'); el.innerHTML = ""; window.currentView = [];
     const escapeRegExp = string => string.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
     let regexPattern = '^' + q.split('*').map(escapeRegExp).join('.*') + '$';
@@ -738,17 +732,87 @@ function performTieredSearch(q, primaryMode, specialRadical = null) {
 
         renderListSegment(mainMerged, "基本檢索結果", false);
         
-        if (mainMerged.length <= 3 && q.length >= 2) {
+        if (mainMerged.length < 3 && q.length >= 2 && q.length <= 6) {
+            
+            // 1. 同音字檢索 (Homophone Fallback)
+            const chars = Array.from(q);
+            let charZhuyins = chars.map(c => {
+                let matches = dataStoreA.filter(i => i['字詞名'] === c);
+                // 【修改點 1】將單字依據「多音排序」進行升冪排序，確保最常見的音排在最前面
+                matches.sort((a, b) => parseInt(a['多音排序'] || '0') - parseInt(b['多音排序'] || '0'));
+                
+                let zList = new Set();
+                matches.forEach(m => {
+                    let zy = (m['注音一式'] || '').trim().split(/\s+/)[0];
+                    if (zy) zList.add(zy);
+                });
+                return Array.from(zList);
+            });
+
+            if (!charZhuyins.some(list => list.length === 0)) {
+                let combinations = [[]];
+                for (let zList of charZhuyins) {
+                    let newCombs = [];
+                    for (let comb of combinations) {
+                        for (let z of zList) {
+                            newCombs.push([...comb, z]);
+                        }
+                    }
+                    combinations = newCombs;
+                }
+
+                // 因為前面已排序，這裡的 zhuyinQueries 陣列索引 (Index) 本身就代表了發音的「優先級」
+                let zhuyinQueries = combinations.map(c => c.join(' '));
+                
+                let homoA = dataStoreA.filter(i => {
+                    if (mainMerged.some(m => m.word === i['字詞名'])) return false;
+                    let zy = (i['注音一式'] || '').replace(/\s+/g, ' ').trim();
+                    return zhuyinQueries.includes(zy);
+                });
+                let homoB = dataStoreB.filter(i => {
+                    if (mainMerged.some(m => m.word === i['成語'])) return false;
+                    let zy = (i['注音'] || '').replace(/\s+/g, ' ').trim();
+                    return zhuyinQueries.includes(zy);
+                });
+
+                let homoMerged = mergeResults(sortResultsA(homoA), sortResultsB(homoB));
+                
+                // 【修改點 2】覆蓋原本的排序，強制依照 zhuyinQueries 的優先級 (多音順序) 進行排序
+                homoMerged.sort((a, b) => {
+                    let zyA_str = (a.zyA || a.zyB || '').replace(/\s+/g, ' ').trim();
+                    let zyB_str = (b.zyA || b.zyB || '').replace(/\s+/g, ' ').trim();
+                    
+                    let indexA = zhuyinQueries.indexOf(zyA_str);
+                    let indexB = zhuyinQueries.indexOf(zyB_str);
+                    
+                    if (indexA === -1) indexA = 9999;
+                    if (indexB === -1) indexB = 9999;
+                    
+                    if (indexA !== indexB) {
+                        return indexA - indexB; // 優先級高（Index 小）的排前面
+                    }
+                    // 如果發音完全相同，則字數少的排前面
+                    return a.word.length - b.word.length;
+                });
+
+                if (homoMerged.length > 0) {
+                    renderListSegment(homoMerged, "同音字檢索結果", true);
+                }
+            }
+
+            // 2. 相似詞 / 參考詞
             const simA = sortResultsA(dataStoreA.filter(i => (i['相似詞'] || '').includes(q)));
             const simB = sortResultsB(dataStoreB.filter(i => (i['近義成語'] || '').includes(q) || (i['參考詞語'] || '').includes(q)));
             let simMerged = mergeResults(simA, simB).filter(item => !mainMerged.some(m => m.word === item.word));
             if (simMerged.length > 0) renderListSegment(simMerged, "相似/參考詞檢索結果", true);
             
+            // 3. 相反詞
             const oppA = sortResultsA(dataStoreA.filter(i => (i['相反詞'] || '').includes(q)));
             const oppB = sortResultsB(dataStoreB.filter(i => (i['反義成語'] || '').includes(q)));
             let oppMerged = mergeResults(oppA, oppB).filter(item => !mainMerged.some(m => m.word === item.word));
             if (oppMerged.length > 0) renderListSegment(oppMerged, "相反詞檢索結果", true);
             
+            // 4. 釋義
             const defA = sortResultsA(dataStoreA.filter(i => (i['釋義'] || '').includes(q)));
             const defB = sortResultsB(dataStoreB.filter(i => 
                 (i['釋義'] || '').includes(q) || (i['典源文獻名稱'] || '').includes(q) || (i['典源文獻內容'] || '').includes(q) || 
