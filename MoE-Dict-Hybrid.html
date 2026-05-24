@@ -32,9 +32,9 @@
         .btn-primary { background: var(--primary); color: white; border: none; font-weight: bold; }
 
         main { flex: 1; display: flex; overflow: hidden; width: 100%; }
-        #list { flex: 0 1 200px; min-width: 150px; border-right: 1px solid var(--border); overflow-y: auto; background: #fff; }
+        #list { width: 200px; min-width: 80px; max-width: 80%; overflow-y: auto; background: #fff; flex-shrink: 0; }
         
-        #detail-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+        #detail-container { flex: 1; min-width: 300px; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
         .dict-panel { overflow-y: auto; background: #fff; position: relative; transition: flex 0.3s ease, padding 0.3s ease; border-bottom: 4px solid var(--border); padding: 20px 15px; }
         .dict-panel:last-child { border-bottom: none; }
         .dict-panel.hidden { display: none; }
@@ -122,7 +122,6 @@
             .btn-text { display: none; }
             .search-label { display: none; }
             #status { display: none; }
-            #list { flex-basis: 35%; }
         }
         .hidden { display: none; }
     </style>
@@ -148,6 +147,7 @@
 
 <main>
     <div id="list"></div>
+    <div id="resizer" style="width: 6px; cursor: col-resize; background: #eee; border-left: 1px solid #ddd; border-right: 1px solid #ddd; flex-shrink: 0; user-select: none;"></div>
     <div id="detail-container">
         <div id="detailA" class="dict-panel hidden"><div class="dict-badge badge-A">國語辭典</div><div class="panel-content"></div></div>
         <div id="detailB" class="dict-panel hidden"><div class="dict-badge badge-B">成語典</div><div class="panel-content"></div></div>
@@ -177,18 +177,18 @@
             <ul style="margin: 0 0 15px 20px; padding: 0;">
                 <li><b>主要適用對象：</b>對歷史語言有興趣的研究者。</li>
                 <li><b>特色：</b>本典為一部歷史語言辭典，記錄中古至現代各類詞語，並大量引用古典文獻書證，字音部分則兼收現代及傳統音讀。</li>
-                <li><b>最新版本編號：</b>2015_20251229（<a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/reviseddict_10312.pdf" target="_blank" style="color: var(--accent); text-decoration: underline;">PDF版使用說明下載</a>）</li>
+                <li><b>最新版本編號：</b>2015_20260325（<a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/reviseddict_10312.pdf" target="_blank" style="color: var(--accent); text-decoration: underline;">PDF版使用說明下載</a>）</li>
                 <li><b>資料下載：</b><a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_reviseddict_download.html" target="_blank" style="color: var(--accent); text-decoration: underline;">教育部授權網下載頁面</a></li>
-                <li><b>載入步驟：</b>於上述頁面下載文字資料庫 ZIP 檔。解壓縮後，將 <code>dict_revised_2015_20251229.xlsx</code> 用 Excel 開啟，另存新檔選擇 <b>"CSV UTF-8 (逗號分隔)"</b> 格式（即 <code>dict_revised_2015_20251229.csv</code>），即可載入本系統使用。</li>
+                <li><b>載入步驟：</b>於上述頁面下載文字資料庫 ZIP 檔。解壓縮後，將 <code>dict_revised_2015_20260325.xlsx</code> 用 Excel 開啟，另存新檔選擇 <b>"CSV UTF-8 (逗號分隔)"</b> 格式（即 <code>dict_revised_2015_20260325.csv</code>），即可載入本系統使用。</li>
             </ul>
 
             <h3 style="color: var(--dictB-color); margin: 10px 0 5px 0;">《成語典》</h3>
             <ul style="margin: 0 0 0 20px; padding: 0;">
                 <li><b>主要適用對象：</b>語文教學者與學生。</li>
                 <li><b>特色：</b>每條成語除釋義、音讀，另有典故原文及其白話譯注、用法說明、例句等，內容豐富。</li>
-                <li><b>最新版本編號：</b>2020_20251224（<a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/idiomsdict_10409.pdf" target="_blank" style="color: var(--accent); text-decoration: underline;">PDF版使用說明下載</a>）</li>
+                <li><b>最新版本編號：</b>2020_20260324（<a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/idiomsdict_10409.pdf" target="_blank" style="color: var(--accent); text-decoration: underline;">PDF版使用說明下載</a>）</li>
                 <li><b>資料下載：</b><a href="https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_idiomsdict_download.html" target="_blank" style="color: var(--accent); text-decoration: underline;">教育部授權網下載頁面</a></li>
-                <li><b>載入步驟：</b>於上述頁面下載文字資料庫 ZIP 檔。解壓縮後，將 <code>dict_idioms_2020_20251224.xlsx</code> 用 Excel 開啟，另存新檔選擇 <b>"CSV UTF-8 (逗號分隔)"</b> 格式（即 <code>dict_idioms_2020_20251224.csv</code>），即可載入本系統使用。</li>
+                <li><b>載入步驟：</b>於上述頁面下載文字資料庫 ZIP 檔。解壓縮後，將 <code>dict_idioms_2020_20260324.xlsx</code> 用 Excel 開啟，另存新檔選擇 <b>"CSV UTF-8 (逗號分隔)"</b> 格式（即 <code>dict_idioms_2020_20260324.csv</code>），即可載入本系統使用。</li>
             </ul>
         </div>
         
@@ -204,58 +204,91 @@
 </div>
 
 <script>
-// --- IndexedDB for File System Handles ---
-const dbName = "DictHandleDB";
-const storeName = "handles";
+// --- IndexedDB for Cached Stores and Handles ---
+const dbName = "DictCacheDB";
+const storeHandles = "handles";
+const storeData = "dataStore"; // 新增儲存快取解析後的陣列
 let dbInstance = null;
 
 function initDB() {
     return new Promise((resolve, reject) => {
         if (dbInstance) return resolve(dbInstance);
-        let request = indexedDB.open(dbName, 1);
-        request.onupgradeneeded = e => e.target.result.createObjectStore(storeName);
+        let request = indexedDB.open(dbName, 2); // 升級版本到 2
+        request.onupgradeneeded = e => {
+            let db = e.target.result;
+            if (!db.objectStoreNames.contains(storeHandles)) {
+                db.createObjectStore(storeHandles);
+            }
+            if (!db.objectStoreNames.contains(storeData)) {
+                db.createObjectStore(storeData);
+            }
+        };
         request.onsuccess = e => { dbInstance = e.target.result; resolve(dbInstance); };
         request.onerror = e => reject(e.target.error);
     });
 }
+
+// 記憶體快取與讀取處理
+async function saveCache(key, data) {
+    let db = await initDB();
+    return new Promise((resolve) => {
+        let tx = db.transaction(storeData, 'readwrite');
+        tx.objectStore(storeData).put(data, key);
+        tx.oncomplete = () => resolve();
+    });
+}
+
+async function getCache(key) {
+    let db = await initDB();
+    return new Promise((resolve) => {
+        let req = db.transaction(storeData).objectStore(storeData).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+    });
+}
+
+async function deleteCache(key) {
+    let db = await initDB();
+    return new Promise((resolve) => {
+        let tx = db.transaction(storeData, 'readwrite');
+        tx.objectStore(storeData).delete(key);
+        tx.oncomplete = () => resolve();
+    });
+}
+
 async function saveHandle(key, handle) {
     let db = await initDB();
     return new Promise((resolve) => {
-        let tx = db.transaction(storeName, 'readwrite');
-        tx.objectStore(storeName).put(handle, key);
+        let tx = db.transaction(storeHandles, 'readwrite');
+        tx.objectStore(storeHandles).put(handle, key);
         tx.oncomplete = () => resolve();
     });
 }
 async function getHandle(key) {
     let db = await initDB();
     return new Promise((resolve) => {
-        let req = db.transaction(storeName).objectStore(storeName).get(key);
+        let req = db.transaction(storeHandles).objectStore(storeHandles).get(key);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => resolve(null);
     });
 }
-
-// 新增：解除 Handle 連結功能
 async function deleteHandle(key) {
     let db = await initDB();
     return new Promise((resolve) => {
-        let tx = db.transaction(storeName, 'readwrite');
-        tx.objectStore(storeName).delete(key);
+        let tx = db.transaction(storeHandles, 'readwrite');
+        tx.objectStore(storeHandles).delete(key);
         tx.oncomplete = () => resolve();
     });
 }
+
+// 移除不必要的恢復權限確認，改為直接點擊載入新檔案
 async function unlinkDictionary(dictType) {
     await deleteHandle('handle_' + dictType);
+    await deleteCache('cache_' + dictType);
+    if (dictType === 'A') dataStoreA = [];
+    if (dictType === 'B') dataStoreB = [];
+    updateStatus();
     renderHome();
-}
-
-async function verifyPermission(fileHandle, withInteraction = false) {
-    const opts = { mode: 'read' };
-    if ((await fileHandle.queryPermission(opts)) === 'granted') return true;
-    if (withInteraction) {
-        if ((await fileHandle.requestPermission(opts)) === 'granted') return true;
-    }
-    return false;
 }
 
 // --- Data Stores ---
@@ -264,7 +297,7 @@ let dataStoreB = [];
 let navHistory = [];
 let navIdx = -1;
 let selectedTextToSearch = "";
-let searchTimeout; // 用於輸入防卡頓
+let searchTimeout; 
 
 const HEADERS_A = ["字詞名","辭條別名","字數","字詞號","部首字","總筆畫數","部首外筆畫數","多音排序","注音一式","變體類型 1:變 2:又音 3:語音 4:讀音","變體注音","漢語拼音","變體漢語拼音","相似詞","相反詞","釋義","多音參見訊息","異體字"];
 const HEADERS_B = ["編號","成語","注音","漢語拼音","釋義","典源文獻名稱","典源文獻內容","典源注解","典源參考資料","典故說明","書證","用法說明-語義說明","用法說明-使用類別","用法說明-例句","辨識-形音辨誤","辨識-同","辨識-異","辨識-例句","近義成語","反義成語","參考詞語","主條成語／非主條成語"];
@@ -297,7 +330,6 @@ function removePinyinTones(str) {
     return str.replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/g, match => pinyinToneMap[match] || match);
 }
 
-// 數字轉換聲調
 function applyToneToPinyin(pinyinInput) {
     return pinyinInput.replace(/([a-zA-ZüÜ]+)(\d)/g, function(match, letters, toneNum) {
         const toneMap = {
@@ -324,16 +356,23 @@ function applyToneToPinyin(pinyinInput) {
 
 const CIRCLE_NUMS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿'.split('');
 
-// --- File Loading & Unloading (保留原有邏輯) ---
+// --- 背景自動載入機制 ---
+async function tryAutoLoadCache() {
+    document.getElementById('status').innerText = `正在載入本機快取...`;
+    let cachedA = await getCache('cache_A');
+    let cachedB = await getCache('cache_B');
+    
+    if (cachedA && cachedA.length > 0) dataStoreA = cachedA;
+    if (cachedB && cachedB.length > 0) dataStoreB = cachedB;
+    
+    updateStatus();
+    renderHome();
+}
+
+// --- File Loading & Unloading (升級為優先讀寫快取) ---
 async function loadDictionary(dictType) {
     try {
-        let handle = await getHandle('handle_' + dictType);
-        if (handle) {
-            let permitted = await verifyPermission(handle, true);
-            if (permitted) { await processFileHandle(handle, dictType); return; }
-        }
-        [handle] = await window.showOpenFilePicker({ types: [{description: 'CSV Files', accept: {'text/csv': ['.csv']}}] });
-        // 在處理成功後才儲存 Handle
+        let [handle] = await window.showOpenFilePicker({ types: [{description: 'CSV Files', accept: {'text/csv': ['.csv']}}] });
         let success = await processFileHandle(handle, dictType);
         if (success !== false) {
             await saveHandle('handle_' + dictType, handle);
@@ -341,7 +380,10 @@ async function loadDictionary(dictType) {
     } catch (err) { console.error(err); alert("載入取消或失敗。"); }
 }
 
-function unloadDictionary(dictType) {
+async function unloadDictionary(dictType) {
+    // 點擊「釋放」，完整清除該字典的快取與記憶體狀態
+    await deleteCache('cache_' + dictType);
+    await deleteHandle('handle_' + dictType);
     if (dictType === 'A') dataStoreA = [];
     if (dictType === 'B') dataStoreB = [];
     updateStatus();
@@ -354,15 +396,14 @@ async function processFileHandle(handle, dictType) {
     const text = await file.text();
     const raw = parseFullCSV(text);
     
-    // 防呆機制：判斷是否為空檔或無標題
     if (!raw || raw.length < 1) {
         alert("請使用正確的格式，目前最新版可從 [教育部國語辭典公眾授權網] 下載");
-        await deleteHandle('handle_' + dictType); // 清空狀態
+        await deleteHandle('handle_' + dictType); 
+        await deleteCache('cache_' + dictType);
         updateStatus(); goHome();
         return false;
     }
 
-    // 防呆機制：判斷至少 6 個核心欄位
     const headers = raw[0];
     let validCount = 0;
     if (dictType === 'A') {
@@ -375,15 +416,19 @@ async function processFileHandle(handle, dictType) {
 
     if (validCount < 6) {
         alert("請使用正確的格式，目前最新版可從 [教育部國語辭典公眾授權網] 下載");
-        await deleteHandle('handle_' + dictType); // 徹底清空錯誤鑰匙狀態
-        updateStatus(); goHome(); // 讓介面恢復可重新載入的狀態
+        await deleteHandle('handle_' + dictType); 
+        await deleteCache('cache_' + dictType);
+        updateStatus(); goHome(); 
         return false;
     }
     
+    document.getElementById('status').innerText = `正在寫入高鐵級快取快取中...`;
     if (dictType === 'A') {
         dataStoreA = raw.slice(1).map(cells => { let o = {}; HEADERS_A.forEach((h, idx) => o[h] = cells[idx] || ""); return o; }).filter(i => i['字詞名']);
+        await saveCache('cache_A', dataStoreA);
     } else {
         dataStoreB = raw.slice(1).map(cells => { let o = {}; HEADERS_B.forEach((h, idx) => o[h] = cells[idx] || ""); return o; }).filter(i => i['成語']);
+        await saveCache('cache_B', dataStoreB);
     }
     updateStatus(); goHome();
     return true;
@@ -420,9 +465,6 @@ function parseFullCSV(text) {
 
 function renderHomeList() {
     const el = document.getElementById('list');
-    
-    // 顯示邏輯：只有載入國語辭典(A)後才顯示。
-    // 若 A 為空（包含全空、或只開啟成語典的狀態），則清空左側不顯示部首表。
     if (dataStoreA.length === 0) {
         el.innerHTML = "";
         return;
@@ -444,20 +486,13 @@ function renderHomeList() {
 }
 
 async function renderHome() {
-    let handleA = await getHandle('handle_A');
-    let handleB = await getHandle('handle_B');
-    
     let btnA = dataStoreA.length > 0 
-        ? `<div class="dict-status"><span>✔️ 國語辭典已載入</span> <button class="btn-unload" onclick="unloadDictionary('A')">釋放</button></div>` 
-        : (handleA 
-            ? `<div class="dict-action-row"><button class="btn-inline btn-ready" onclick="loadDictionary('A')">恢復 國語辭典 權限</button> <button class="btn-unlink" onclick="unlinkDictionary('A')">解除連結</button></div>`
-            : `<div class="dict-action-row"><button class="btn-inline" onclick="loadDictionary('A')">載入 國語辭典 CSV</button></div>`);
+        ? `<div class="dict-status"><span>✔️ 國語辭典已載入</span> <button class="btn-unload" onclick="unloadDictionary('A')">釋放解除</button></div>` 
+        : `<div class="dict-action-row"><button class="btn-inline" onclick="loadDictionary('A')">載入 國語辭典 CSV</button></div>`;
         
     let btnB = dataStoreB.length > 0 
-        ? `<div class="dict-status"><span>✔️ 成語典已載入</span> <button class="btn-unload" onclick="unloadDictionary('B')">釋放</button></div>` 
-        : (handleB 
-            ? `<div class="dict-action-row"><button class="btn-inline btn-ready" onclick="loadDictionary('B')">恢復 成語典 權限</button> <button class="btn-unlink" onclick="unlinkDictionary('B')">解除連結</button></div>`
-            : `<div class="dict-action-row"><button class="btn-inline" onclick="loadDictionary('B')">載入 成語典 CSV</button></div>`);
+        ? `<div class="dict-status"><span>✔️ 成語典已載入</span> <button class="btn-unload" onclick="unloadDictionary('B')">釋放解除</button></div>` 
+        : `<div class="dict-action-row"><button class="btn-inline" onclick="loadDictionary('B')">載入 成語典 CSV</button></div>`;
 
     let msgArea = (dataStoreA.length > 0 || dataStoreB.length > 0) ? `<h2>請在上方輸入框開始查詢，或點選左側部首</h2>` : `<h2>請先載入辭典檔案</h2>`;
     
@@ -474,13 +509,12 @@ async function renderHome() {
                     <tr><td>基本檢索</td><td>支援關鍵字、注音、拼音、部首、筆畫。關鍵字支援 <b>*</b> 萬用字元。</td></tr>
                     <tr><td>釋義檢索</td><td>全文比對兩部辭典之釋義與典故 (需 2 字以上)。</td></tr>
                     <tr><td>智慧雙顯</td><td>依收錄情況自動極大化顯示空間。</td></tr>
-                    <tr><td>權限記憶</td><td>選取後自動記憶路徑，下次點擊恢復即可秒開。</td></tr>
+                    <tr><td>快取記憶</td><td>一次選擇成功，內容永久加密儲存於瀏覽器，下次打開直接秒開！</td></tr>
                 </tbody>
             </table>
         </div>
     `;
     
-    // 渲染部首表時交給統一判斷處理
     renderHomeList();
 }
 
@@ -681,7 +715,6 @@ function mergeResults(resA, resB, extraInfoKeyA = null) {
 }
 
 function performWildcardSearch(q) {
-    // 新增防護機制：如果拔除 * 號後字串為空（代表只輸入 * 或連續的 ***），直接擋掉不檢索
     if (q.replace(/\*/g, '').trim() === '') {
         renderList([], "萬用字元檢索結果", "⚠️ 請在 * 號前後輸入字");
         return;
@@ -740,11 +773,9 @@ function performTieredSearch(q, primaryMode, specialRadical = null) {
         
         if (mainMerged.length < 3 && q.length >= 2 && q.length <= 6) {
             
-            // 1. 同音字檢索 (Homophone Fallback)
             const chars = Array.from(q);
             let charZhuyins = chars.map(c => {
                 let matches = dataStoreA.filter(i => i['字詞名'] === c);
-                // 【修改點 1】將單字依據「多音排序」進行升冪排序，確保最常見的音排在最前面
                 matches.sort((a, b) => parseInt(a['多音排序'] || '0') - parseInt(b['多音排序'] || '0'));
                 
                 let zList = new Set();
@@ -767,7 +798,6 @@ function performTieredSearch(q, primaryMode, specialRadical = null) {
                     combinations = newCombs;
                 }
 
-                // 因為前面已排序，這裡的 zhuyinQueries 陣列索引 (Index) 本身就代表了發音的「優先級」
                 let zhuyinQueries = combinations.map(c => c.join(' '));
                 
                 let homoA = dataStoreA.filter(i => {
@@ -783,7 +813,6 @@ function performTieredSearch(q, primaryMode, specialRadical = null) {
 
                 let homoMerged = mergeResults(sortResultsA(homoA), sortResultsB(homoB));
                 
-                // 【修改點 2】覆蓋原本的排序，強制依照 zhuyinQueries 的優先級 (多音順序) 進行排序
                 homoMerged.sort((a, b) => {
                     let zyA_str = (a.zyA || a.zyB || '').replace(/\s+/g, ' ').trim();
                     let zyB_str = (b.zyA || b.zyB || '').replace(/\s+/g, ' ').trim();
@@ -795,9 +824,8 @@ function performTieredSearch(q, primaryMode, specialRadical = null) {
                     if (indexB === -1) indexB = 9999;
                     
                     if (indexA !== indexB) {
-                        return indexA - indexB; // 優先級高（Index 小）的排前面
+                        return indexA - indexB; 
                     }
-                    // 如果發音完全相同，則字數少的排前面
                     return a.word.length - b.word.length;
                 });
 
@@ -806,19 +834,16 @@ function performTieredSearch(q, primaryMode, specialRadical = null) {
                 }
             }
 
-            // 2. 相似詞 / 參考詞
             const simA = sortResultsA(dataStoreA.filter(i => (i['相似詞'] || '').includes(q)));
             const simB = sortResultsB(dataStoreB.filter(i => (i['近義成語'] || '').includes(q) || (i['參考詞語'] || '').includes(q)));
             let simMerged = mergeResults(simA, simB).filter(item => !mainMerged.some(m => m.word === item.word));
             if (simMerged.length > 0) renderListSegment(simMerged, "相似/參考詞檢索結果", true);
             
-            // 3. 相反詞
             const oppA = sortResultsA(dataStoreA.filter(i => (i['相反詞'] || '').includes(q)));
             const oppB = sortResultsB(dataStoreB.filter(i => (i['反義成語'] || '').includes(q)));
             let oppMerged = mergeResults(oppA, oppB).filter(item => !mainMerged.some(m => m.word === item.word));
             if (oppMerged.length > 0) renderListSegment(oppMerged, "相反詞檢索結果", true);
             
-            // 4. 釋義
             const defA = sortResultsA(dataStoreA.filter(i => (i['釋義'] || '').includes(q)));
             const defB = sortResultsB(dataStoreB.filter(i => 
                 (i['釋義'] || '').includes(q) || (i['典源文獻名稱'] || '').includes(q) || (i['典源文獻內容'] || '').includes(q) || 
@@ -938,7 +963,6 @@ function renderDualDetail(word, passedA = null, passedB = null) {
     const dqRaw = defSearchInput.value.trim() || searchInput.value.trim();
     const dq = (!dqRaw.includes('*') && dqRaw.length >= 2 && !(/^[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü\s\-]+$/i.test(dqRaw))) ? dqRaw : "";
 
-    // 【修改點】獨立抽出標題處理邏輯，確保圖片代碼不被切碎，中文字依然可點擊
     const buildTitleHTML = (w, dictType) => {
         const imgRegex = /&([^;]+\.(?:png|gif|jpg|jpeg));/gi;
         let result = "";
@@ -1248,7 +1272,6 @@ function jumpToStrokeCount(num) {
 function jumpToZhuyin(z) { 
     searchInput.value = z; defSearchInput.value = ""; 
     
-    // 長注音整串精準比對 (忽略全半形空白差異)，單音節則陣列包含比對
     let searchZ = z.replace(/\s+/g, ' ').trim();
     let isMulti = searchZ.includes(' ');
     
@@ -1357,7 +1380,43 @@ function bindSelectionEvents() {
     };
 }
 document.addEventListener('mousedown', (e) => { const wrapper = document.getElementById('selection-wrapper'); if (wrapper && !wrapper.contains(e.target)) wrapper.style.display = 'none'; });
-document.addEventListener('DOMContentLoaded', () => { window.currentView = []; initDB().then(() => renderHome()); });
+
+// --- 左右拉動調整寬度邏輯 ---
+document.addEventListener('DOMContentLoaded', () => {
+    const resizer = document.getElementById('resizer');
+    const leftSide = document.getElementById('list');
+
+    if (resizer && leftSide) {
+        resizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startWidth = leftSide.getBoundingClientRect().width;
+
+            function onMouseMove(moveEvent) {
+                const newWidth = startWidth + (moveEvent.clientX - startX);
+                leftSide.style.width = `${newWidth}px`;
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.style.cursor = 'default';
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = 'col-resize'; // 拖曳時強制滑鼠圖標不閃爍
+        });
+    }
+});
+
+// 網頁載入時初始化 DB，並啟動背景快取自動搜尋
+document.addEventListener('DOMContentLoaded', () => { 
+    window.currentView = []; 
+    initDB().then(() => {
+        tryAutoLoadCache();
+    }); 
+});
 </script>
 </body>
 </html>
