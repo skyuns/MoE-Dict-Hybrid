@@ -49,13 +49,13 @@
 
 ### 《重編國語辭典修訂本》
 1. 前往下載：[教育部國語辭典公眾授權網](https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_reviseddict_download.html)
-2. 下載 `dict_revised_2015_20251229` 文字資料庫 ZIP 檔。
+2. 下載 `dict_revised_2015_20260325` 文字資料庫 ZIP 檔。
 3. 解壓縮後，將 `.xlsx` 檔案用 Excel 開啟，**另存新檔為 "CSV UTF-8 (逗號分隔)" 格式**。
 4. 於本系統點擊載入該 CSV 檔即可使用。
 
 ### 《成語典》
 1. 前往下載：[教育部成語典公眾授權網](https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_idiomsdict_download.html)
-2. 下載 `dict_idioms_2020_20251224` 文字資料庫 ZIP 檔。
+2. 下載 `dict_idioms_2020_20260324` 文字資料庫 ZIP 檔。
 3. 解壓縮後，將 `.xlsx` 檔案用 Excel 開啟，**另存新檔為 "CSV UTF-8 (逗號分隔)" 格式**。
 4. 於本系統點擊載入該 CSV 檔即可使用。
 
